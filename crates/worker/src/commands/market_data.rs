@@ -2,9 +2,12 @@ use ibkr_core::model::history::HistoryRequest;
 use ibkr_core::model::stock::StockConidRequest;
 use ibkr_core::IbkrClient;
 use serde_json::Value;
+use sqlx::PgPool;
 
 use crate::cli::args::{FetchHistoryArgs, StockConidArgs};
 use crate::error::WorkerError;
+
+use super::conids;
 
 pub async fn fetch_history(
     client: &IbkrClient,
@@ -21,11 +24,36 @@ pub async fn fetch_history(
     Ok(client.fetch_history(&request).await?)
 }
 
-pub async fn stock_conid(client: &IbkrClient, args: StockConidArgs) -> Result<Value, WorkerError> {
+pub async fn stock_conid_cached(
+    pool: Option<&PgPool>,
+    client: &IbkrClient,
+    args: StockConidArgs,
+) -> Result<Value, WorkerError> {
     let request = StockConidRequest {
-        symbol: args.symbol,
+        symbol: args.symbol.to_ascii_uppercase(),
         exchange: args.exchange,
         default_filtering: args.default_filtering,
     };
-    Ok(client.stock_conid(&request).await?)
+
+    if let Some(pool) = pool {
+        match conids::find_active_conid(pool, &request.symbol, request.exchange.as_deref()).await {
+            Ok(Some(row)) => return Ok(serde_json::to_value(row.into_lookup_result())?),
+            Ok(None) => {}
+            Err(err @ WorkerError::ConidLookup { .. }) => return Err(err),
+            Err(err) => {
+                eprintln!("conid database lookup failed; falling back to IBKR API: {err}");
+            }
+        }
+    }
+
+    let result = client.stock_lookup(&request).await?;
+    if let Some(pool) = pool {
+        match conids::upsert_conid(pool, &result).await {
+            Ok(row) => return Ok(serde_json::to_value(row.into_lookup_result())?),
+            Err(err) => {
+                eprintln!("conid database upsert failed; returning IBKR API result: {err}");
+            }
+        }
+    }
+    Ok(serde_json::to_value(result)?)
 }

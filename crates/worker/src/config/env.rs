@@ -25,6 +25,7 @@ pub fn apply(config: &mut RawConfig) -> Result<(), WorkerError> {
         &mut config.lst_lock_ttl_seconds,
         "IBKR_LST_LOCK_TTL_SECONDS",
     )?;
+    set_string(&mut config.database, "IBKR_DATABASE");
     Ok(())
 }
 

@@ -1,4 +1,5 @@
-use serde_json::{json, Value};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::{IbkrError, Result};
 
@@ -15,11 +16,27 @@ impl StockConidRequest {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StockLookupResult {
+    pub symbol: String,
+    pub name_: Option<String>,
+    pub conid: i64,
+    pub exchange: Option<String>,
+}
+
 pub fn conid_by_symbol(response: &Value, request: &StockConidRequest) -> Result<Value> {
+    Ok(serde_json::to_value(stock_by_symbol(response, request)?)?)
+}
+
+pub fn stock_by_symbol(response: &Value, request: &StockConidRequest) -> Result<StockLookupResult> {
     let instruments = instruments(response, &request.symbol)?;
     let mut matches = Vec::new();
 
     for instrument in instruments {
+        let name = instrument
+            .get("name")
+            .and_then(Value::as_str)
+            .map(str::to_string);
         let Some(contracts) = instrument.get("contracts").and_then(Value::as_array) else {
             continue;
         };
@@ -31,15 +48,24 @@ pub fn conid_by_symbol(response: &Value, request: &StockConidRequest) -> Result<
             if !matches_exchange(contract, request.exchange.as_deref()) {
                 continue;
             }
-            let Some(conid) = contract.get("conid") else {
+            let Some(conid) = contract.get("conid").and_then(Value::as_i64) else {
                 continue;
             };
-            matches.push(conid.clone());
+            let exchange = contract
+                .get("exchange")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            matches.push(StockLookupResult {
+                symbol: request.symbol.to_ascii_uppercase(),
+                name_: name.clone(),
+                conid,
+                exchange,
+            });
         }
     }
 
     match matches.len() {
-        1 => Ok(json!({ request.symbol.clone(): matches.remove(0) })),
+        1 => Ok(matches.remove(0)),
         0 => Err(lookup_error(
             request,
             "no contracts matched the requested filters",
@@ -92,6 +118,7 @@ mod tests {
     fn one_us_contract_returns_conid() {
         let response = json!({
             "AAPL": [{
+                "name": "APPLE INC",
                 "contracts": [
                     {"conid": 265598, "exchange": "NASDAQ", "isUS": true}
                 ]
@@ -101,7 +128,42 @@ mod tests {
 
         let value = conid_by_symbol(&response, &request).expect("lookup should succeed");
 
-        assert_eq!(value, json!({"AAPL": 265598}));
+        assert_eq!(
+            value,
+            json!({
+                "symbol": "AAPL",
+                "name_": "APPLE INC",
+                "conid": 265598,
+                "exchange": "NASDAQ"
+            })
+        );
+    }
+
+    #[test]
+    fn stock_lookup_returns_name_conid_and_exchange() {
+        let response = json!({
+            "AAPL": [{
+                "name": "APPLE INC",
+                "chineseName": "苹果公司",
+                "assetClass": "STK",
+                "contracts": [
+                    {"conid": 265598, "exchange": "NASDAQ", "isUS": true}
+                ]
+            }]
+        });
+        let request = request("aapl", None, true);
+
+        let value = stock_by_symbol(&response, &request).expect("lookup should succeed");
+
+        assert_eq!(
+            value,
+            StockLookupResult {
+                symbol: "AAPL".to_string(),
+                name_: Some("APPLE INC".to_string()),
+                conid: 265598,
+                exchange: Some("NASDAQ".to_string()),
+            }
+        );
     }
 
     #[test]
@@ -151,7 +213,8 @@ mod tests {
 
         let value = conid_by_symbol(&response, &request).expect("lookup should succeed");
 
-        assert_eq!(value, json!({"AAPL": 265598}));
+        assert_eq!(value["conid"], 265598);
+        assert_eq!(value["exchange"], "NASDAQ");
     }
 
     #[test]
@@ -167,7 +230,8 @@ mod tests {
 
         let value = conid_by_symbol(&response, &request).expect("lookup should succeed");
 
-        assert_eq!(value, json!({"AAPL": 555}));
+        assert_eq!(value["conid"], 555);
+        assert_eq!(value["exchange"], "MEXI");
     }
 
     fn request(symbol: &str, exchange: Option<&str>, default_filtering: bool) -> StockConidRequest {

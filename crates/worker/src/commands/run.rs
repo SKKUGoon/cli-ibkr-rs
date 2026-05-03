@@ -1,4 +1,7 @@
 use ibkr_core::IbkrClient;
+use sqlx::{postgres::PgPoolOptions, PgPool};
+use std::time::Duration;
+use tokio::time;
 
 use crate::cli::{Cli, Command};
 use crate::config::RawConfig;
@@ -12,14 +15,19 @@ pub async fn run(cli: Cli) -> Result<(), WorkerError> {
         return oauth::run(command);
     }
 
-    let config = RawConfig::load(cli.timeout_seconds)?.oauth()?;
+    let raw_config = RawConfig::load(cli.timeout_seconds)?;
+    let database = raw_config.database.clone();
+    let config = raw_config.oauth()?;
     let client = IbkrClient::new(config)?;
 
     let value = match cli.command {
         Command::AuthStatus => auth::auth_status(&client).await?,
         Command::InitSession { compete } => auth::init_session(&client, compete).await?,
         Command::FetchHistory(args) => market_data::fetch_history(&client, args).await?,
-        Command::StockConid(args) => market_data::stock_conid(&client, args).await?,
+        Command::StockConid(args) => {
+            let pool = connect_conid_database(database.as_deref()).await;
+            market_data::stock_conid_cached(pool.as_ref(), &client, args).await?
+        }
         Command::Accounts => portfolio::accounts(&client).await?,
         Command::AccountSummary { account_id } => {
             portfolio::account_summary(&client, &account_id).await?
@@ -39,4 +47,30 @@ pub async fn run(cli: Cli) -> Result<(), WorkerError> {
     };
 
     output::write_json(&value, cli.output.as_deref(), cli.pretty)
+}
+
+async fn connect_conid_database(database: Option<&str>) -> Option<PgPool> {
+    let Some(database) = database else {
+        eprintln!("IBKR_DATABASE is not set; falling back to IBKR API for conid lookup");
+        return None;
+    };
+
+    let connect = PgPoolOptions::new()
+        .max_connections(1)
+        .acquire_timeout(Duration::from_secs(15))
+        .connect(database);
+
+    match time::timeout(Duration::from_secs(15), connect).await {
+        Ok(Ok(pool)) => Some(pool),
+        Ok(Err(err)) => {
+            eprintln!("IBKR_DATABASE is not connectable; falling back to IBKR API: {err}");
+            None
+        }
+        Err(_) => {
+            eprintln!(
+                "IBKR_DATABASE connection timed out after 15 seconds; falling back to IBKR API"
+            );
+            None
+        }
+    }
 }

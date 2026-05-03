@@ -15,5 +15,6 @@ clap = { version = "4.5.60", features = ["derive"] }
 dotenvy = "0.15.7"
 ibkr_core = { package = "core", path = "../core" }
 serde_json = "1.0.149"
+sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio-rustls"] }
 thiserror = "2.0.18"
 tokio = { version = "1.52.1", features = ["macros", "rt-multi-thread"] }

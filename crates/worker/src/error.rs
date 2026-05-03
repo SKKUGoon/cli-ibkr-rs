@@ -66,6 +66,12 @@ pub enum WorkerError {
     #[error("unexpected order response while handling confirmations: {0}")]
     UnexpectedOrderResponse(String),
 
+    #[error("conid lookup failed for {symbol}: {message}")]
+    ConidLookup { symbol: String, message: String },
+
+    #[error("Postgres request failed: {0}")]
+    Postgres(#[from] sqlx::Error),
+
     #[error("{0}")]
     Io(#[from] std::io::Error),
 

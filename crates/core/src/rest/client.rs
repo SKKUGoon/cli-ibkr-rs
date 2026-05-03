@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 
 use crate::model::history::HistoryRequest;
 use crate::model::order::{OrderRequest, PlaceOrdersRequest, ReplyRequest};
-use crate::model::stock::{self, StockConidRequest};
+use crate::model::stock::{self, StockConidRequest, StockLookupResult};
 use crate::oauth::{LiveSessionProvider, OAuthConfig};
 use crate::Result;
 
@@ -46,6 +46,11 @@ impl IbkrClient {
     pub async fn stock_conid(&self, request: &StockConidRequest) -> Result<Value> {
         let response = self.get_json(endpoint::STOCKS, &request.params()).await?;
         stock::conid_by_symbol(&response, request)
+    }
+
+    pub async fn stock_lookup(&self, request: &StockConidRequest) -> Result<StockLookupResult> {
+        let response = self.get_json(endpoint::STOCKS, &request.params()).await?;
+        stock::stock_by_symbol(&response, request)
     }
 
     pub async fn accounts(&self) -> Result<Value> {

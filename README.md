@@ -55,7 +55,7 @@ ibkrctl init-session
 
 ### 3. Look up a stock conid
 
-This calls IBKR's stock lookup endpoint and maps a stock symbol to one contract id using the current filters. If multiple contracts match, the command fails so the caller can provide a more specific `--exchange` or filter choice.
+This looks up an active row in `warehouse.conids` first, then falls back to IBKR's stock lookup endpoint when the symbol is not cached or the database is unavailable. It returns the selected symbol, English name, conid, and exchange. If multiple contracts match, the command fails so the caller can provide a more specific `--exchange` or filter choice.
 
 ```bash
 # Local Development
@@ -148,6 +148,7 @@ IBKR_SIGNATURE_KEY_PATH=/secure/path/private_signature.pem
 IBKR_ENCRYPTION_KEY_PATH=/secure/path/private_encryption.pem
 IBKR_DH_PARAM_PATH=/secure/path/dhparam.pem
 IBKR_TIMEOUT_SECONDS=30
+IBKR_DATABASE=postgres://user:password@host:5432/dbname
 IBKR_LST_CACHE_MODE=redis
 IBKR_REDIS_URL=redis://user:password@redis.example.internal:6379/0
 IBKR_REDIS_KEY_PREFIX=ibkr:oauth:lst

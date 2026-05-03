@@ -22,6 +22,7 @@ pub struct RawConfig {
     pub redis_key_prefix: Option<String>,
     pub lst_refresh_skew_seconds: Option<u64>,
     pub lst_lock_ttl_seconds: Option<u64>,
+    pub database: Option<String>,
 }
 
 impl RawConfig {
