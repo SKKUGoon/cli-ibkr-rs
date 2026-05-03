@@ -1,0 +1,26 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "ibkr_core"
+
+[dependencies]
+base64 = "0.22.1"
+hex = "0.4.3"
+hmac = "0.12.1"
+percent-encoding = "2.3.2"
+rand = "0.8.5"
+reqwest = { version = "0.12.28", default-features = false, features = ["json", "rustls-tls"] }
+redis = { version = "0.32.7", default-features = false, features = ["aio", "tokio-comp"] }
+rsa = { version = "0.9.10", features = ["pem", "sha2"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+sha1 = "0.10.6"
+sha2 = "0.10.9"
+signature = "2.2.0"
+thiserror = "2.0.18"
+tokio = { version = "1.52.1", features = ["time"] }
