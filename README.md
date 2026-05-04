@@ -136,11 +136,25 @@ Algo orders use the same order placement command with `strategy` and `strategy_p
 
 ## Configuration
 
-Configuration comes only from `.env` and process environment variables. Local development can use a `.env` file in the current directory. Server and Airflow usage should provide the same variables through the runtime environment or a secret manager.
+Configuration comes from `.env` and process environment variables. Local development can use a `.env` file in the current directory. Server and Airflow usage should provide the same variables through the runtime environment or a secret manager.
 
 ```sh
 cp .env.example .env
 ```
+
+By default, `ibkrctl` searches for `.env` from the current directory upward. To use a specific dotenv file, pass `--env-file`; values already present in the process environment take precedence over values in the file.
+
+```sh
+ibkrctl --env-file /secure/path/ibkr.env init-session
+```
+
+To inspect the effective supported `IBKR_*` variables without validating credentials or calling IBKR, run:
+
+```sh
+ibkrctl --env-file /secure/path/ibkr.env env
+```
+
+Secret-like values are truncated in the output.
 
 ```text
 IBKR_BASE_URL=https://api.ibkr.com/v1/api

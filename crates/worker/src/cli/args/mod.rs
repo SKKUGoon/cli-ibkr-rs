@@ -14,6 +14,9 @@ pub use order::{
 #[command(about = "OAuth-only IBKR CLI for Airflow tasks")]
 pub struct Cli {
     #[arg(long, global = true)]
+    pub env_file: Option<PathBuf>,
+
+    #[arg(long, global = true)]
     pub output: Option<PathBuf>,
 
     #[arg(long, global = true)]
@@ -33,6 +36,7 @@ pub enum Command {
         command: OauthCommand,
     },
     AuthStatus,
+    Env,
     InitSession {
         #[arg(long, default_value_t = true)]
         compete: bool,

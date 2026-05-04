@@ -8,11 +8,14 @@ use crate::config::RawConfig;
 use crate::error::WorkerError;
 use crate::output;
 
-use super::{auth, market_data, oauth, order, portfolio};
+use super::{auth, environment, market_data, oauth, order, portfolio};
 
 pub async fn run(cli: Cli) -> Result<(), WorkerError> {
     if let Command::Oauth { command } = cli.command {
         return oauth::run(command);
+    }
+    if let Command::Env = cli.command {
+        return output::write_text(&environment::render(), cli.output.as_deref());
     }
 
     let raw_config = RawConfig::load(cli.timeout_seconds)?;
@@ -22,6 +25,7 @@ pub async fn run(cli: Cli) -> Result<(), WorkerError> {
 
     let value = match cli.command {
         Command::AuthStatus => auth::auth_status(&client).await?,
+        Command::Env => unreachable!("env handled before client config loading"),
         Command::InitSession { compete } => auth::init_session(&client, compete).await?,
         Command::FetchHistory(args) => market_data::fetch_history(&client, args).await?,
         Command::StockConid(args) => {
