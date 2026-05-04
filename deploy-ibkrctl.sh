@@ -3,8 +3,7 @@
 set -euo pipefail
 
 REPO_OWNER="SKKUGoon"
-REPO_NAME="ibkr-rs"
-TARGET="x86_64-unknown-linux-gnu"
+REPO_NAME="cli-ibkr-rs"
 BINARY_NAME="ibkrctl"
 DOWNLOAD_DIR="${HOME}/downloads"
 
@@ -28,6 +27,28 @@ info() { echo -e "${C_BLUE}${1}${C_RESET}"; }
 warn() { echo -e "${C_YELLOW}${1}${C_RESET}"; }
 success() { echo -e "${C_GREEN}${1}${C_RESET}"; }
 error() { echo -e "${C_RED}${1}${C_RESET}" >&2; }
+
+detect_target() {
+  local os arch
+  os="$(uname -s)"
+  arch="$(uname -m)"
+
+  case "${os}:${arch}" in
+    Linux:x86_64)
+      echo "x86_64-unknown-linux-gnu"
+      ;;
+    Darwin:arm64)
+      echo "aarch64-apple-darwin"
+      ;;
+    *)
+      error "Unsupported platform: ${os} ${arch}"
+      error "Available release targets: x86_64-unknown-linux-gnu, aarch64-apple-darwin"
+      exit 1
+      ;;
+  esac
+}
+
+TARGET="$(detect_target)"
 
 echo -e "${C_BOLD}IBKR CLI GitHub Release Deployer${C_RESET}"
 info "Target: ${TARGET}"
