@@ -10,3 +10,7 @@ pub async fn auth_status(client: &IbkrClient) -> Result<Value, WorkerError> {
 pub async fn init_session(client: &IbkrClient, compete: bool) -> Result<Value, WorkerError> {
     Ok(client.init_session(compete).await?)
 }
+
+pub async fn tickle(client: &IbkrClient) -> Result<Value, WorkerError> {
+    Ok(client.tickle().await?)
+}

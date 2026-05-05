@@ -12,12 +12,6 @@ Installed binary:
 ibkrctl [GLOBAL_OPTIONS] <COMMAND> [COMMAND_OPTIONS]
 ```
 
-Local development from the workspace:
-
-```bash
-cargo run -p worker --bin ibkrctl -- [GLOBAL_OPTIONS] <COMMAND> [COMMAND_OPTIONS]
-```
-
 Examples:
 
 ```bash
@@ -153,6 +147,7 @@ Top-level commands:
 | `auth-status` | Return IBKR authentication status. |
 | `env` | Print supported environment variables with secrets masked. |
 | `init-session` | Initialize the authenticated brokerage session. |
+| `tickle` | Keep an already-initialized brokerage session alive. |
 | `fetch-history` | Fetch historical market-data bars for a conid. |
 | `stock-conid` | Resolve a stock symbol to an active IBKR conid, optionally using a PostgreSQL cache. |
 | `accounts` | List portfolio accounts. |
@@ -311,6 +306,26 @@ ibkrctl init-session --compete
 ```
 
 Run this before protected IServer account, market-data, or order commands, especially if IBKR reports that the brokerage bridge is not initialized.
+
+## `tickle`
+
+Pings IBKR to keep an already-initialized brokerage session alive. This does not reauthenticate or initialize a missing brokerage session; use `init-session` for recovery.
+
+```bash
+ibkrctl tickle
+```
+
+Endpoint:
+
+```text
+POST tickle
+```
+
+Output:
+
+The raw JSON response from IBKR.
+
+For long-running jobs, call this command about once every 60 seconds rather than before every API request.
 
 ## `fetch-history`
 
@@ -981,6 +996,7 @@ Example adaptive algo order:
 | --- | --- |
 | `auth-status` | `iserver/auth/status` |
 | `init-session` | `iserver/auth/ssodh/init` |
+| `tickle` | `tickle` |
 | `fetch-history` | `iserver/marketdata/history` |
 | `stock-conid` | `trsrv/stocks` |
 | `accounts` | `portfolio/accounts` |

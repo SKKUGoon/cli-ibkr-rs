@@ -27,6 +27,7 @@ pub async fn run(cli: Cli) -> Result<(), WorkerError> {
         Command::AuthStatus => auth::auth_status(&client).await?,
         Command::Env => unreachable!("env handled before client config loading"),
         Command::InitSession { compete } => auth::init_session(&client, compete).await?,
+        Command::Tickle => auth::tickle(&client).await?,
         Command::FetchHistory(args) => {
             let pool = connect_database(database.as_deref()).await;
             market_data::fetch_history(pool.as_ref(), &client, args).await?

@@ -229,6 +229,7 @@ BashOperator(
 
 Airflow should treat exit code `0` as success and any nonzero exit code as task failure.
 Run `init-session` before protected IBKR calls. If IBKR returns `Bad Request: no bridge`, run `init-session` again; Redis caches OAuth Live Session Tokens, not brokerage bridge state.
+For long-running jobs, call `tickle` about once per minute to keep an already-initialized brokerage session alive.
 
 ## API Surface
 
@@ -236,6 +237,7 @@ Implemented REST/CLI commands:
 
 - `auth-status`: `iserver/auth/status`
 - `init-session`: `iserver/auth/ssodh/init`
+- `tickle`: `tickle`
 - `fetch-history`: `iserver/marketdata/history`
 - `stock-conid`: `trsrv/stocks`
 - `accounts`: `portfolio/accounts`

@@ -16,4 +16,8 @@ impl IbkrClient {
         self.post_json(endpoint::INIT_SESSION, &[], Some(&body))
             .await
     }
+
+    pub async fn tickle(&self) -> Result<Value> {
+        self.post_json(endpoint::TICKLE, &[], None::<&()>).await
+    }
 }

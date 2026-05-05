@@ -41,6 +41,7 @@ pub enum Command {
         #[arg(long, default_value_t = true)]
         compete: bool,
     },
+    Tickle,
     FetchHistory(FetchHistoryArgs),
     StockConid(StockConidArgs),
     Accounts,
