@@ -69,6 +69,9 @@ pub enum WorkerError {
     #[error("conid lookup failed for {symbol}: {message}")]
     ConidLookup { symbol: String, message: String },
 
+    #[error("history bars persistence failed: {message}")]
+    HistoryBars { message: String },
+
     #[error("Postgres request failed: {0}")]
     Postgres(#[from] sqlx::Error),
 

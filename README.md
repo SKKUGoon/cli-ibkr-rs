@@ -3,7 +3,7 @@
 `ibkrctl` is an OAuth-only IBKR CLI for Airflow tasks. Airflow invokes one command, reads exit status, and handles scheduling or retries.
 
 Success writes JSON to stdout and exits `0`. Failures write diagnostics to stderr and exit nonzero.
-Airflow should own persistence: use stdout or `--output`, then let the DAG write results to storage.
+Most commands leave persistence to Airflow: use stdout or `--output`, then let the DAG write results to storage. `fetch-history` also writes bars to `warehouse.ibkr_bars` when `IBKR_DATABASE` is configured.
 
 ## Explicit Non-Goals
 
@@ -67,7 +67,7 @@ ibkrctl stock-conid --symbol AAPL --exchange NASDAQ
 
 ### 4. Fetch historical bars
 
-This requests historical market-data bars for a known IBKR conid. By default the JSON response goes to stdout; use `--output` when Airflow should hand a file to a downstream task.
+This requests historical market-data bars for a known IBKR conid. By default the JSON response goes to stdout; use `--output` when Airflow should hand a file to a downstream task. If `IBKR_DATABASE` is set and connectable, returned bars are also upserted into `warehouse.ibkr_bars`; database persistence is best-effort and does not change the JSON output.
 
 ```bash
 # Local Development

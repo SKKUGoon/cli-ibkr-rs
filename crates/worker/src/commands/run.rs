@@ -27,9 +27,12 @@ pub async fn run(cli: Cli) -> Result<(), WorkerError> {
         Command::AuthStatus => auth::auth_status(&client).await?,
         Command::Env => unreachable!("env handled before client config loading"),
         Command::InitSession { compete } => auth::init_session(&client, compete).await?,
-        Command::FetchHistory(args) => market_data::fetch_history(&client, args).await?,
+        Command::FetchHistory(args) => {
+            let pool = connect_database(database.as_deref()).await;
+            market_data::fetch_history(pool.as_ref(), &client, args).await?
+        }
         Command::StockConid(args) => {
-            let pool = connect_conid_database(database.as_deref()).await;
+            let pool = connect_database(database.as_deref()).await;
             market_data::stock_conid_cached(pool.as_ref(), &client, args).await?
         }
         Command::Accounts => portfolio::accounts(&client).await?,
@@ -53,9 +56,9 @@ pub async fn run(cli: Cli) -> Result<(), WorkerError> {
     output::write_json(&value, cli.output.as_deref(), cli.pretty)
 }
 
-async fn connect_conid_database(database: Option<&str>) -> Option<PgPool> {
+async fn connect_database(database: Option<&str>) -> Option<PgPool> {
     let Some(database) = database else {
-        eprintln!("IBKR_DATABASE is not set; falling back to IBKR API for conid lookup");
+        eprintln!("IBKR_DATABASE is not set; skipping local database lookup or persistence");
         return None;
     };
 
@@ -67,12 +70,12 @@ async fn connect_conid_database(database: Option<&str>) -> Option<PgPool> {
     match time::timeout(Duration::from_secs(15), connect).await {
         Ok(Ok(pool)) => Some(pool),
         Ok(Err(err)) => {
-            eprintln!("IBKR_DATABASE is not connectable; falling back to IBKR API: {err}");
+            eprintln!("IBKR_DATABASE is not connectable; skipping local database lookup or persistence: {err}");
             None
         }
         Err(_) => {
             eprintln!(
-                "IBKR_DATABASE connection timed out after 15 seconds; falling back to IBKR API"
+                "IBKR_DATABASE connection timed out after 15 seconds; skipping local database lookup or persistence"
             );
             None
         }

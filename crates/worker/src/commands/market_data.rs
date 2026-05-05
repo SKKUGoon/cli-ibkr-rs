@@ -7,21 +7,40 @@ use sqlx::PgPool;
 use crate::cli::args::{FetchHistoryArgs, StockConidArgs};
 use crate::error::WorkerError;
 
-use super::conids;
+use super::{bars, conids};
 
 pub async fn fetch_history(
+    pool: Option<&PgPool>,
     client: &IbkrClient,
     args: FetchHistoryArgs,
 ) -> Result<Value, WorkerError> {
+    let conid = args.conid;
     let request = HistoryRequest {
-        conid: args.conid,
+        conid: conid.clone(),
         period: args.period,
         bar: args.bar,
         exchange: args.exchange,
         outside_rth: args.outside_rth,
         start_time: args.start_time,
     };
-    Ok(client.fetch_history(&request).await?)
+    let value = client.fetch_history(&request).await?;
+
+    if let Some(pool) = pool {
+        match bars::parse_history_bars(&conid, &value) {
+            Ok(parsed) => {
+                if let Err(err) = bars::upsert_history_bars(pool, &parsed).await {
+                    eprintln!(
+                        "historical bars database upsert failed; returning IBKR API result: {err}"
+                    );
+                }
+            }
+            Err(err) => {
+                eprintln!("historical bars parsing failed; returning IBKR API result: {err}");
+            }
+        }
+    }
+
+    Ok(value)
 }
 
 pub async fn stock_conid_cached(

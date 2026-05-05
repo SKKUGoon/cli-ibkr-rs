@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod bars;
 pub mod conids;
 pub mod environment;
 pub mod market_data;

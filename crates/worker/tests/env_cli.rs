@@ -130,5 +130,13 @@ fn version_flag_prints_package_version() {
 
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout).expect("stdout should be utf-8");
-    assert_eq!(stdout.trim(), "ibkrctl 0.3.0\nworker 0.3.0\ncore 0.3.0");
+    assert_eq!(
+        stdout.trim(),
+        format!(
+            "ibkrctl {}\nworker {}\ncore {}",
+            env!("CARGO_PKG_VERSION"),
+            env!("CARGO_PKG_VERSION"),
+            ibkr_core::VERSION
+        )
+    );
 }
