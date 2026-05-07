@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{Args, Subcommand};
+use clap::{ArgGroup, Args, Subcommand};
 
 #[derive(Debug, Subcommand)]
 pub enum OrderCommand {
@@ -26,23 +26,44 @@ pub struct OrderAlgosArgs {
 }
 
 #[derive(Debug, Args)]
+#[command(group(
+    ArgGroup::new("orders_input")
+        .required(true)
+        .args(["orders_file", "orders_json"])
+))]
+#[command(group(
+    ArgGroup::new("answers_input")
+        .required(true)
+        .args(["answers_file", "answers_json"])
+))]
 pub struct OrderPlaceArgs {
     #[arg(long)]
     pub account_id: String,
-    #[arg(long)]
-    pub orders_file: PathBuf,
-    #[arg(long)]
-    pub answers_file: PathBuf,
+    #[arg(long, conflicts_with = "orders_json")]
+    pub orders_file: Option<PathBuf>,
+    #[arg(long, conflicts_with = "orders_file")]
+    pub orders_json: Option<String>,
+    #[arg(long, conflicts_with = "answers_json")]
+    pub answers_file: Option<PathBuf>,
+    #[arg(long, conflicts_with = "answers_file")]
+    pub answers_json: Option<String>,
     #[arg(long, default_value_t = 20)]
     pub max_replies: u32,
 }
 
 #[derive(Debug, Args)]
+#[command(group(
+    ArgGroup::new("orders_input")
+        .required(true)
+        .args(["orders_file", "orders_json"])
+))]
 pub struct OrderWhatifArgs {
     #[arg(long)]
     pub account_id: String,
-    #[arg(long)]
-    pub orders_file: PathBuf,
+    #[arg(long, conflicts_with = "orders_json")]
+    pub orders_file: Option<PathBuf>,
+    #[arg(long, conflicts_with = "orders_file")]
+    pub orders_json: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -62,15 +83,29 @@ pub struct OrderCancelArgs {
 }
 
 #[derive(Debug, Args)]
+#[command(group(
+    ArgGroup::new("order_input")
+        .required(true)
+        .args(["order_file", "order_json"])
+))]
+#[command(group(
+    ArgGroup::new("answers_input")
+        .required(true)
+        .args(["answers_file", "answers_json"])
+))]
 pub struct OrderModifyArgs {
     #[arg(long)]
     pub account_id: String,
     #[arg(long)]
     pub order_id: String,
-    #[arg(long)]
-    pub order_file: PathBuf,
-    #[arg(long)]
-    pub answers_file: PathBuf,
+    #[arg(long, conflicts_with = "order_json")]
+    pub order_file: Option<PathBuf>,
+    #[arg(long, conflicts_with = "order_file")]
+    pub order_json: Option<String>,
+    #[arg(long, conflicts_with = "answers_json")]
+    pub answers_file: Option<PathBuf>,
+    #[arg(long, conflicts_with = "answers_file")]
+    pub answers_json: Option<String>,
     #[arg(long, default_value_t = 20)]
     pub max_replies: u32,
 }

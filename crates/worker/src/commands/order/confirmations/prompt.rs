@@ -23,6 +23,15 @@ pub(super) struct OrderPrompt {
     pub message_id: Option<String>,
 }
 
+impl OrderPrompt {
+    pub(super) fn describe(&self) -> String {
+        match &self.message_id {
+            Some(message_id) => format!("{} (messageId: {message_id})", self.message),
+            None => format!("{} (messageId: not provided by IBKR)", self.message),
+        }
+    }
+}
+
 pub(super) fn order_prompt(value: &Value) -> Result<Option<OrderPrompt>, WorkerError> {
     let Value::Array(items) = value else {
         return Err(WorkerError::UnexpectedOrderResponse(value.to_string()));

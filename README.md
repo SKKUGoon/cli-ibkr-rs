@@ -79,7 +79,7 @@ ibkrctl fetch-history --conid 265598 --period 1d --bar 1min --output /tmp/ibkr-h
 
 ### 5. Place an order
 
-Order placement is non-interactive. The order file contains one order object or an array of order objects. If IBKR returns warning prompts, the answers file must explicitly accept them by message substring or message id.
+Order placement is non-interactive. The order input contains one order object or an array of order objects, passed either with `--orders-file` or `--orders-json`. If IBKR returns warning prompts, the answers input must explicitly accept them by message substring or message id, passed either with `--answers-file` or `--answers-json`.
 Run `init-session` before `order algos`, `order place`, `order modify`, or other protected IServer order calls.
 
 Normal orders omit IB Algo fields:
@@ -104,6 +104,12 @@ Normal orders omit IB Algo fields:
 
 ```bash
 ibkrctl order place --account-id DU123456 --orders-file ./order.json --answers-file ./answers.json
+```
+
+For schedulers that already render JSON strings, the same request can be passed inline:
+
+```bash
+ibkrctl order place --account-id DU123456 --orders-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"MKT","acct_id":"DU123456","coid":"example-20260503-0001"}' --answers-json '{"o354":true}'
 ```
 
 To inspect IB Algo strategies available for a contract, query the Web API algo endpoint after `init-session`.

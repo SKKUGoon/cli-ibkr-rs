@@ -46,6 +46,9 @@ pub enum WorkerError {
         source: std::io::Error,
     },
 
+    #[error("invalid order input: {0}")]
+    InvalidOrderInput(&'static str),
+
     #[error("order confirmation answer missing for message: {0}")]
     MissingOrderAnswer(String),
 

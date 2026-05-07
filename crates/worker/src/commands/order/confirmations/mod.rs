@@ -27,8 +27,8 @@ pub async fn handle_confirmations(
             Some(true) => {
                 value = client.reply(&prompt.reply_id, true).await?;
             }
-            Some(false) => return Err(WorkerError::RejectedOrderAnswer(prompt.message)),
-            None => return Err(WorkerError::MissingOrderAnswer(prompt.message)),
+            Some(false) => return Err(WorkerError::RejectedOrderAnswer(prompt.describe())),
+            None => return Err(WorkerError::MissingOrderAnswer(prompt.describe())),
         }
     }
 

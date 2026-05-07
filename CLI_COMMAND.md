@@ -665,10 +665,10 @@ ibkrctl order algos --conid 265598 --algo Adaptive --algo Vwap --add-description
 
 ## `order place`
 
-Places one or more orders from a JSON file and automatically answers IBKR confirmation prompts using an answers file.
+Places one or more orders from a JSON file or JSON argument and automatically answers IBKR confirmation prompts using an answers file or JSON argument.
 
 ```bash
-ibkrctl order place --account-id <ACCOUNT_ID> --orders-file <PATH> --answers-file <PATH> [--max-replies <N>]
+ibkrctl order place --account-id <ACCOUNT_ID> (--orders-file <PATH> | --orders-json <JSON>) (--answers-file <PATH> | --answers-json <JSON>) [--max-replies <N>]
 ```
 
 Options:
@@ -676,8 +676,10 @@ Options:
 | Option | Required | Default | Description |
 | --- | --- | --- | --- |
 | `--account-id <ACCOUNT_ID>` | Yes | None | IBKR account id used in the endpoint path. |
-| `--orders-file <PATH>` | Yes | None | JSON file containing one order object or an array of order objects. |
-| `--answers-file <PATH>` | Yes | None | JSON map used to accept or reject IBKR confirmation prompts. |
+| `--orders-file <PATH>` | Yes, unless `--orders-json` is used | None | JSON file containing one order object or an array of order objects. |
+| `--orders-json <JSON>` | Yes, unless `--orders-file` is used | None | Inline JSON containing one order object or an array of order objects. |
+| `--answers-file <PATH>` | Yes, unless `--answers-json` is used | None | JSON map used to accept or reject IBKR confirmation prompts. |
+| `--answers-json <JSON>` | Yes, unless `--answers-file` is used | None | Inline JSON map used to accept or reject IBKR confirmation prompts. |
 | `--max-replies <N>` | No | `20` | Maximum number of automatic confirmation reply loops before failing. |
 
 Endpoint:
@@ -727,7 +729,7 @@ Accepted order fields are listed in [Order JSON Fields](#order-json-fields).
 
 Answers file format:
 
-The answers file is a JSON object whose keys are either IBKR `messageId` values or substrings expected in prompt messages. Values are booleans.
+The answers JSON is a JSON object whose keys are either IBKR `messageId` values or substrings expected in prompt messages. Values are booleans.
 
 ```json
 {
@@ -755,6 +757,7 @@ Examples:
 ```bash
 ibkrctl order place --account-id DU123456 --orders-file ./order.json --answers-file ./answers.json
 ibkrctl order place --account-id DU123456 --orders-file ./orders.json --answers-file ./answers.json --max-replies 5 --pretty
+ibkrctl order place --account-id DU123456 --orders-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"LMT","price":185.5,"acct_id":"DU123456"}' --answers-json '{"o354":true}' --pretty
 ```
 
 ## `order whatif`
@@ -762,7 +765,7 @@ ibkrctl order place --account-id DU123456 --orders-file ./orders.json --answers-
 Submits one or more orders to the IBKR what-if endpoint.
 
 ```bash
-ibkrctl order whatif --account-id <ACCOUNT_ID> --orders-file <PATH>
+ibkrctl order whatif --account-id <ACCOUNT_ID> (--orders-file <PATH> | --orders-json <JSON>)
 ```
 
 Options:
@@ -770,7 +773,8 @@ Options:
 | Option | Required | Description |
 | --- | --- | --- |
 | `--account-id <ACCOUNT_ID>` | Yes | IBKR account id used in the endpoint path. |
-| `--orders-file <PATH>` | Yes | JSON file containing one order object or an array of order objects. |
+| `--orders-file <PATH>` | Yes, unless `--orders-json` is used | JSON file containing one order object or an array of order objects. |
+| `--orders-json <JSON>` | Yes, unless `--orders-file` is used | Inline JSON containing one order object or an array of order objects. |
 
 Endpoint:
 
@@ -786,6 +790,7 @@ Example:
 
 ```bash
 ibkrctl order whatif --account-id DU123456 --orders-file ./order.json --pretty
+ibkrctl order whatif --account-id DU123456 --orders-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"LMT","price":185.5,"acct_id":"DU123456"}' --pretty
 ```
 
 ## `order reply`
@@ -853,10 +858,10 @@ ibkrctl order cancel --account-id DU123456 --order-id 987654321 --pretty
 
 ## `order modify`
 
-Modifies an existing order from a JSON file and automatically answers IBKR confirmation prompts using an answers file.
+Modifies an existing order from a JSON file or JSON argument and automatically answers IBKR confirmation prompts using an answers file or JSON argument.
 
 ```bash
-ibkrctl order modify --account-id <ACCOUNT_ID> --order-id <ORDER_ID> --order-file <PATH> --answers-file <PATH> [--max-replies <N>]
+ibkrctl order modify --account-id <ACCOUNT_ID> --order-id <ORDER_ID> (--order-file <PATH> | --order-json <JSON>) (--answers-file <PATH> | --answers-json <JSON>) [--max-replies <N>]
 ```
 
 Options:
@@ -865,8 +870,10 @@ Options:
 | --- | --- | --- | --- |
 | `--account-id <ACCOUNT_ID>` | Yes | None | IBKR account id used in the endpoint path. |
 | `--order-id <ORDER_ID>` | Yes | None | Order id to modify. |
-| `--order-file <PATH>` | Yes | None | JSON file containing one order object. |
-| `--answers-file <PATH>` | Yes | None | JSON map used to accept or reject IBKR confirmation prompts. |
+| `--order-file <PATH>` | Yes, unless `--order-json` is used | None | JSON file containing one order object. |
+| `--order-json <JSON>` | Yes, unless `--order-file` is used | None | Inline JSON containing one order object. |
+| `--answers-file <PATH>` | Yes, unless `--answers-json` is used | None | JSON map used to accept or reject IBKR confirmation prompts. |
+| `--answers-json <JSON>` | Yes, unless `--answers-file` is used | None | Inline JSON map used to accept or reject IBKR confirmation prompts. |
 | `--max-replies <N>` | No | `20` | Maximum number of automatic confirmation reply loops before failing. |
 
 Endpoint:
@@ -887,6 +894,7 @@ Example:
 
 ```bash
 ibkrctl order modify --account-id DU123456 --order-id 987654321 --order-file ./modify.json --answers-file ./answers.json --pretty
+ibkrctl order modify --account-id DU123456 --order-id 987654321 --order-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"LMT","price":185.5,"acct_id":"DU123456"}' --answers-json '{"o354":true}' --pretty
 ```
 
 ## `order status`
