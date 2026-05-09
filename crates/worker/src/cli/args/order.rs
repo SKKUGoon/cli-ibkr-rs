@@ -11,6 +11,7 @@ pub enum OrderCommand {
     Cancel(OrderCancelArgs),
     Modify(OrderModifyArgs),
     Status(OrderStatusArgs),
+    FeePlan(OrderFeePlanArgs),
 }
 
 #[derive(Debug, Args)]
@@ -30,11 +31,6 @@ pub struct OrderAlgosArgs {
     ArgGroup::new("orders_input")
         .required(true)
         .args(["orders_file", "orders_json"])
-))]
-#[command(group(
-    ArgGroup::new("answers_input")
-        .required(true)
-        .args(["answers_file", "answers_json"])
 ))]
 pub struct OrderPlaceArgs {
     #[arg(long)]
@@ -88,11 +84,6 @@ pub struct OrderCancelArgs {
         .required(true)
         .args(["order_file", "order_json"])
 ))]
-#[command(group(
-    ArgGroup::new("answers_input")
-        .required(true)
-        .args(["answers_file", "answers_json"])
-))]
 pub struct OrderModifyArgs {
     #[arg(long)]
     pub account_id: String,
@@ -114,4 +105,17 @@ pub struct OrderModifyArgs {
 pub struct OrderStatusArgs {
     #[arg(long)]
     pub order_id: String,
+}
+
+#[derive(Debug, Args)]
+#[command(group(
+    ArgGroup::new("orders_input")
+        .required(true)
+        .args(["orders_file", "orders_json"])
+))]
+pub struct OrderFeePlanArgs {
+    #[arg(long, conflicts_with = "orders_json")]
+    pub orders_file: Option<PathBuf>,
+    #[arg(long, conflicts_with = "orders_file")]
+    pub orders_json: Option<String>,
 }

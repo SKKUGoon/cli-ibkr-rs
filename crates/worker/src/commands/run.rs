@@ -3,7 +3,7 @@ use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::time::Duration;
 use tokio::time;
 
-use crate::cli::{Cli, Command};
+use crate::cli::{Cli, Command, OrderCommand};
 use crate::config::RawConfig;
 use crate::error::WorkerError;
 use crate::output;
@@ -16,6 +16,13 @@ pub async fn run(cli: Cli) -> Result<(), WorkerError> {
     }
     if let Command::Env = cli.command {
         return output::write_text(&environment::render(), cli.output.as_deref());
+    }
+    if let Command::Order {
+        command: OrderCommand::FeePlan(args),
+    } = cli.command
+    {
+        let value = order::fee_plan(args).await?;
+        return output::write_json(&value, cli.output.as_deref(), cli.pretty);
     }
 
     let raw_config = RawConfig::load(cli.timeout_seconds)?;

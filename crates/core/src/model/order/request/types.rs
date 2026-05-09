@@ -3,6 +3,15 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+pub const FEE_PLAN_NOTIONAL_THRESHOLD: f64 = 10_000.0;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum OrderFeePlan {
+    Tiered,
+    Fixed,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderRequest {
@@ -176,4 +185,30 @@ pub struct PlaceOrdersRequest {
 #[derive(Debug, Clone, Serialize)]
 pub struct ReplyRequest {
     pub confirmed: bool,
+}
+
+impl OrderRequest {
+    pub fn trading_notional(&self) -> Option<f64> {
+        let quantity = numeric_value(&self.quantity)?;
+        let price = numeric_value(&self.price)?;
+        Some((quantity * price).abs())
+    }
+
+    pub fn automatic_fee_plan(&self) -> Option<OrderFeePlan> {
+        self.trading_notional().map(|notional| {
+            if notional <= FEE_PLAN_NOTIONAL_THRESHOLD {
+                OrderFeePlan::Tiered
+            } else {
+                OrderFeePlan::Fixed
+            }
+        })
+    }
+}
+
+fn numeric_value(value: &Option<Value>) -> Option<f64> {
+    match value.as_ref()? {
+        Value::Number(number) => number.as_f64(),
+        Value::String(value) => value.parse().ok(),
+        _ => None,
+    }
 }

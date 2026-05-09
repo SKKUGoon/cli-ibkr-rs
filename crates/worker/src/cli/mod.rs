@@ -1,6 +1,6 @@
 pub mod args;
 
 pub use args::{
-    Cli, Command, OauthCommand, OrderAlgosArgs, OrderCancelArgs, OrderCommand, OrderModifyArgs,
-    OrderPlaceArgs, OrderReplyArgs, OrderStatusArgs, OrderWhatifArgs,
+    Cli, Command, OauthCommand, OrderAlgosArgs, OrderCancelArgs, OrderCommand, OrderFeePlanArgs,
+    OrderModifyArgs, OrderPlaceArgs, OrderReplyArgs, OrderStatusArgs, OrderWhatifArgs,
 };

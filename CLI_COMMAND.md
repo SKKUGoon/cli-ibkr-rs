@@ -163,6 +163,7 @@ Top-level commands:
 | `order cancel` | Cancel an order. |
 | `order modify` | Modify an order and automatically handle configured confirmations. |
 | `order status` | Fetch status for one order. |
+| `order fee-plan` | Compute the local Tiered/Fixed fee-plan decision for one or more limit orders. |
 
 ## `oauth generate-materials`
 
@@ -626,6 +627,7 @@ Order subcommands:
 | `order cancel` | Cancel an existing order. |
 | `order modify` | Modify an existing order from a JSON file. |
 | `order status` | Fetch status for an order id. |
+| `order fee-plan` | Compute the local Tiered/Fixed fee-plan decision for one or more limit orders. |
 
 Run `init-session` before protected order commands if IBKR has not already initialized the brokerage session.
 
@@ -665,10 +667,10 @@ ibkrctl order algos --conid 265598 --algo Adaptive --algo Vwap --add-description
 
 ## `order place`
 
-Places one or more orders from a JSON file or JSON argument and automatically answers IBKR confirmation prompts using an answers file or JSON argument.
+Places one or more orders from a JSON file or JSON argument and automatically answers selected IBKR confirmation prompts using built-in defaults plus any answers file or JSON argument.
 
 ```bash
-ibkrctl order place --account-id <ACCOUNT_ID> (--orders-file <PATH> | --orders-json <JSON>) (--answers-file <PATH> | --answers-json <JSON>) [--max-replies <N>]
+ibkrctl order place --account-id <ACCOUNT_ID> (--orders-file <PATH> | --orders-json <JSON>) [--answers-file <PATH> | --answers-json <JSON>] [--max-replies <N>]
 ```
 
 Options:
@@ -678,8 +680,8 @@ Options:
 | `--account-id <ACCOUNT_ID>` | Yes | None | IBKR account id used in the endpoint path. |
 | `--orders-file <PATH>` | Yes, unless `--orders-json` is used | None | JSON file containing one order object or an array of order objects. |
 | `--orders-json <JSON>` | Yes, unless `--orders-file` is used | None | Inline JSON containing one order object or an array of order objects. |
-| `--answers-file <PATH>` | Yes, unless `--answers-json` is used | None | JSON map used to accept or reject IBKR confirmation prompts. |
-| `--answers-json <JSON>` | Yes, unless `--answers-file` is used | None | Inline JSON map used to accept or reject IBKR confirmation prompts. |
+| `--answers-file <PATH>` | No | Built-in defaults | JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
+| `--answers-json <JSON>` | No | Built-in defaults | Inline JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
 | `--max-replies <N>` | No | `20` | Maximum number of automatic confirmation reply loops before failing. |
 
 Endpoint:
@@ -727,7 +729,7 @@ Or an array of order objects:
 
 Accepted order fields are listed in [Order JSON Fields](#order-json-fields).
 
-Answers file format:
+Answers format:
 
 The answers JSON is a JSON object whose keys are either IBKR `messageId` values or substrings expected in prompt messages. Values are booleans.
 
@@ -738,6 +740,19 @@ The answers JSON is a JSON object whose keys are either IBKR `messageId` values 
   "missing market data": false
 }
 ```
+
+Built-in answers:
+
+The CLI accepts these known prompts by default, based on the `QuestionType` constants used by `ibind`'s `rest_04_place_order.py` and `rest_07_bracket_orders.py` examples:
+
+| Constant | Keys | Default |
+| --- | --- | --- |
+| `PRICE_PERCENTAGE_CONSTRAINT` | `o163`, `price exceeds the Percentage constraint` | `true` |
+| `ORDER_VALUE_LIMIT` | `o451`, `exceeds the Total Value Limit` | `true` |
+| `MISSING_MARKET_DATA` | `o354`, `You are submitting an order without market data` | `true` |
+| `STOP_ORDER_RISKS` | `o10331`, `You are about to submit a stop order` | `true` |
+
+When `--answers-file` or `--answers-json` is supplied, its entries override or extend the built-in answers. Unknown prompts still fail unless supplied explicitly.
 
 Prompt matching:
 
@@ -758,6 +773,7 @@ Examples:
 ibkrctl order place --account-id DU123456 --orders-file ./order.json --answers-file ./answers.json
 ibkrctl order place --account-id DU123456 --orders-file ./orders.json --answers-file ./answers.json --max-replies 5 --pretty
 ibkrctl order place --account-id DU123456 --orders-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"LMT","price":185.5,"acct_id":"DU123456"}' --answers-json '{"o354":true}' --pretty
+ibkrctl order place --account-id DU123456 --orders-file ./order.json --answers-json '{"o354":false}'
 ```
 
 ## `order whatif`
@@ -858,10 +874,10 @@ ibkrctl order cancel --account-id DU123456 --order-id 987654321 --pretty
 
 ## `order modify`
 
-Modifies an existing order from a JSON file or JSON argument and automatically answers IBKR confirmation prompts using an answers file or JSON argument.
+Modifies an existing order from a JSON file or JSON argument and automatically answers selected IBKR confirmation prompts using built-in defaults plus any answers file or JSON argument.
 
 ```bash
-ibkrctl order modify --account-id <ACCOUNT_ID> --order-id <ORDER_ID> (--order-file <PATH> | --order-json <JSON>) (--answers-file <PATH> | --answers-json <JSON>) [--max-replies <N>]
+ibkrctl order modify --account-id <ACCOUNT_ID> --order-id <ORDER_ID> (--order-file <PATH> | --order-json <JSON>) [--answers-file <PATH> | --answers-json <JSON>] [--max-replies <N>]
 ```
 
 Options:
@@ -872,8 +888,8 @@ Options:
 | `--order-id <ORDER_ID>` | Yes | None | Order id to modify. |
 | `--order-file <PATH>` | Yes, unless `--order-json` is used | None | JSON file containing one order object. |
 | `--order-json <JSON>` | Yes, unless `--order-file` is used | None | Inline JSON containing one order object. |
-| `--answers-file <PATH>` | Yes, unless `--answers-json` is used | None | JSON map used to accept or reject IBKR confirmation prompts. |
-| `--answers-json <JSON>` | Yes, unless `--answers-file` is used | None | Inline JSON map used to accept or reject IBKR confirmation prompts. |
+| `--answers-file <PATH>` | No | Built-in defaults | JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
+| `--answers-json <JSON>` | No | Built-in defaults | Inline JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
 | `--max-replies <N>` | No | `20` | Maximum number of automatic confirmation reply loops before failing. |
 
 Endpoint:
@@ -925,6 +941,54 @@ Example:
 
 ```bash
 ibkrctl order status --order-id 987654321 --pretty
+```
+
+## `order fee-plan`
+
+Computes the local Tiered/Fixed fee-plan decision for one or more limit orders. This command does not call IBKR and does not require OAuth configuration.
+
+IBKR's Web API order documentation lists the order fields accepted by `/iserver/account/{accountId}/orders`, while IBKR's pricing-plan documentation describes Fixed/Tiered as an account pricing structure. The Web API documentation does not currently document a per-order field for changing the account commission plan. For that reason, this command reports the local decision without injecting an unsupported order field into the submitted order body.
+
+Decision rule:
+
+- If `quantity * price <= 10000`, the fee plan is `Tiered`.
+- If `quantity * price > 10000`, the fee plan is `Fixed`.
+
+```bash
+ibkrctl order fee-plan (--orders-file <PATH> | --orders-json <JSON>)
+```
+
+Options:
+
+| Option | Required | Description |
+| --- | --- | --- |
+| `--orders-file <PATH>` | Yes, unless `--orders-json` is used | JSON file containing one order object or an array of order objects. |
+| `--orders-json <JSON>` | Yes, unless `--orders-file` is used | Inline JSON containing one order object or an array of order objects. |
+
+Input requirements:
+
+Each order must include numeric `quantity` and `price` fields. `price` is treated as the limit price for the notional calculation.
+
+Output:
+
+```json
+{
+  "orders": [
+    {
+      "index": 0,
+      "notional": 10000.0,
+      "threshold": 10000.0,
+      "feePlan": "Tiered"
+    }
+  ]
+}
+```
+
+Examples:
+
+```bash
+ibkrctl order fee-plan --orders-file ./orders.json --pretty
+ibkrctl order fee-plan --orders-json '{"conid":265598,"side":"BUY","quantity":100,"order_type":"LMT","price":100,"acct_id":"DU123456"}' --pretty
 ```
 
 ## Order JSON Fields

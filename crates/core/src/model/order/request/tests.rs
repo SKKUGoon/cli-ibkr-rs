@@ -30,6 +30,24 @@ fn serializes_algo_order_fields() {
 }
 
 #[test]
+fn computes_automatic_fee_plan_from_notional() {
+    let tiered = parse_order_json(r#"{"quantity":100,"price":100}"#).unwrap();
+    assert_eq!(tiered.trading_notional(), Some(10_000.0));
+    assert_eq!(tiered.automatic_fee_plan(), Some(OrderFeePlan::Tiered));
+
+    let fixed = parse_order_json(r#"{"quantity":100,"price":100.01}"#).unwrap();
+    assert_eq!(fixed.trading_notional(), Some(10_001.0));
+    assert_eq!(fixed.automatic_fee_plan(), Some(OrderFeePlan::Fixed));
+}
+
+#[test]
+fn omits_automatic_fee_plan_without_quantity_or_limit_price() {
+    let request = parse_order_json(r#"{"quantity":100,"orderType":"MKT"}"#).unwrap();
+    assert_eq!(request.trading_notional(), None);
+    assert_eq!(request.automatic_fee_plan(), None);
+}
+
+#[test]
 fn parses_single_object_and_array() {
     let single = parse_orders_json(r#"{"conid":1,"side":"BUY"}"#).unwrap();
     assert_eq!(single.orders.len(), 1);

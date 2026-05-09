@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 
 pub use order::{
-    OrderAlgosArgs, OrderCancelArgs, OrderCommand, OrderModifyArgs, OrderPlaceArgs, OrderReplyArgs,
-    OrderStatusArgs, OrderWhatifArgs,
+    OrderAlgosArgs, OrderCancelArgs, OrderCommand, OrderFeePlanArgs, OrderModifyArgs,
+    OrderPlaceArgs, OrderReplyArgs, OrderStatusArgs, OrderWhatifArgs,
 };
 
 #[derive(Debug, Parser)]

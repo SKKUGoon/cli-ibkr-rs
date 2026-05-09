@@ -140,3 +140,39 @@ fn version_flag_prints_package_version() {
         )
     );
 }
+
+#[test]
+fn order_place_accepts_missing_answers_input() {
+    let output = ibkrctl()
+        .arg("order")
+        .arg("place")
+        .arg("--account-id")
+        .arg("DU123456")
+        .arg("--orders-json")
+        .arg(r#"{"conid":265598,"side":"BUY","quantity":1,"order_type":"LMT","price":100,"acct_id":"DU123456"}"#)
+        .output()
+        .expect("ibkrctl should run");
+
+    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
+    assert!(!stderr.contains("answers_input"));
+    assert!(!stderr.contains("required arguments were not provided"));
+}
+
+#[test]
+fn order_modify_accepts_missing_answers_input() {
+    let output = ibkrctl()
+        .arg("order")
+        .arg("modify")
+        .arg("--account-id")
+        .arg("DU123456")
+        .arg("--order-id")
+        .arg("123")
+        .arg("--order-json")
+        .arg(r#"{"conid":265598,"side":"BUY","quantity":1,"order_type":"LMT","price":100,"acct_id":"DU123456"}"#)
+        .output()
+        .expect("ibkrctl should run");
+
+    let stderr = String::from_utf8(output.stderr).expect("stderr should be utf-8");
+    assert!(!stderr.contains("answers_input"));
+    assert!(!stderr.contains("required arguments were not provided"));
+}

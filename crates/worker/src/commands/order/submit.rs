@@ -1,9 +1,10 @@
+use ibkr_core::model::order::FEE_PLAN_NOTIONAL_THRESHOLD;
 use ibkr_core::IbkrClient;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::cli::{
-    OrderCancelArgs, OrderModifyArgs, OrderPlaceArgs, OrderReplyArgs, OrderStatusArgs,
-    OrderWhatifArgs,
+    OrderCancelArgs, OrderFeePlanArgs, OrderModifyArgs, OrderPlaceArgs, OrderReplyArgs,
+    OrderStatusArgs, OrderWhatifArgs,
 };
 use crate::error::WorkerError;
 
@@ -43,4 +44,33 @@ pub async fn modify(client: &IbkrClient, args: OrderModifyArgs) -> Result<Value,
 
 pub async fn status(client: &IbkrClient, args: OrderStatusArgs) -> Result<Value, WorkerError> {
     Ok(client.order_status(&args.order_id).await?)
+}
+
+pub async fn fee_plan(args: OrderFeePlanArgs) -> Result<Value, WorkerError> {
+    let request = read_orders_input(args.orders_file.as_deref(), args.orders_json.as_deref())?;
+    let decisions = request
+        .orders
+        .iter()
+        .enumerate()
+        .map(|(index, order)| {
+            let notional = order
+                .trading_notional()
+                .ok_or(WorkerError::InvalidOrderInput(
+                    "fee-plan requires numeric quantity and limit price fields on every order",
+                ))?;
+            let fee_plan = order
+                .automatic_fee_plan()
+                .ok_or(WorkerError::InvalidOrderInput(
+                    "fee-plan requires numeric quantity and limit price fields on every order",
+                ))?;
+            Ok(json!({
+                "index": index,
+                "notional": notional,
+                "threshold": FEE_PLAN_NOTIONAL_THRESHOLD,
+                "feePlan": fee_plan,
+            }))
+        })
+        .collect::<Result<Vec<_>, WorkerError>>()?;
+
+    Ok(json!({ "orders": decisions }))
 }

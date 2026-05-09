@@ -2,8 +2,8 @@ use std::fs;
 use std::path::Path;
 
 use ibkr_core::model::order::{
-    parse_answers_json, parse_order_json, parse_orders_json, Answers, OrderRequest,
-    PlaceOrdersRequest,
+    default_answers, parse_answers_json, parse_order_json, parse_orders_json, Answers,
+    OrderRequest, PlaceOrdersRequest,
 };
 
 use crate::error::WorkerError;
@@ -47,11 +47,46 @@ pub fn read_answers_file(path: &Path) -> Result<Answers, WorkerError> {
 }
 
 pub fn read_answers_input(path: Option<&Path>, json: Option<&str>) -> Result<Answers, WorkerError> {
-    match (path, json) {
-        (Some(path), None) => read_answers_file(path),
-        (None, Some(json)) => Ok(parse_answers_json(json)?),
-        _ => Err(WorkerError::InvalidOrderInput(
-            "provide exactly one of --answers-file or --answers-json",
-        )),
+    let mut answers = default_answers();
+    let overrides = match (path, json) {
+        (Some(path), None) => Some(read_answers_file(path)?),
+        (None, Some(json)) => Some(parse_answers_json(json)?),
+        (None, None) => None,
+        (Some(_), Some(_)) => {
+            return Err(WorkerError::InvalidOrderInput(
+                "provide at most one of --answers-file or --answers-json",
+            ));
+        }
+    };
+
+    if let Some(overrides) = overrides {
+        answers.extend(overrides);
+    }
+
+    Ok(answers)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn answers_input_uses_defaults_when_omitted() {
+        let answers = read_answers_input(None, None).unwrap();
+
+        assert_eq!(answers.get("o163"), Some(&true));
+        assert_eq!(answers.get("o451"), Some(&true));
+        assert_eq!(answers.get("o354"), Some(&true));
+        assert_eq!(answers.get("o10331"), Some(&true));
+    }
+
+    #[test]
+    fn answers_input_overrides_defaults_and_extends_map() {
+        let answers =
+            read_answers_input(None, Some(r#"{"o354":false,"custom warning":true}"#)).unwrap();
+
+        assert_eq!(answers.get("o354"), Some(&false));
+        assert_eq!(answers.get("custom warning"), Some(&true));
+        assert_eq!(answers.get("o163"), Some(&true));
     }
 }
