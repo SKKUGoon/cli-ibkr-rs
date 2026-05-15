@@ -2,8 +2,8 @@ use std::fs;
 use std::path::Path;
 
 use ibkr_core::model::order::{
-    default_answers, parse_answers_json, parse_order_json, parse_orders_json, Answers,
-    OrderRequest, PlaceOrdersRequest,
+    default_answers, merge_answers, parse_answers_json, parse_order_json, parse_orders_json,
+    Answers, OrderRequest, PlaceOrdersRequest,
 };
 
 use crate::error::WorkerError;
@@ -47,7 +47,6 @@ pub fn read_answers_file(path: &Path) -> Result<Answers, WorkerError> {
 }
 
 pub fn read_answers_input(path: Option<&Path>, json: Option<&str>) -> Result<Answers, WorkerError> {
-    let mut answers = default_answers();
     let overrides = match (path, json) {
         (Some(path), None) => Some(read_answers_file(path)?),
         (None, Some(json)) => Some(parse_answers_json(json)?),
@@ -59,11 +58,10 @@ pub fn read_answers_input(path: Option<&Path>, json: Option<&str>) -> Result<Ans
         }
     };
 
-    if let Some(overrides) = overrides {
-        answers.extend(overrides);
-    }
-
-    Ok(answers)
+    Ok(match overrides {
+        Some(overrides) => merge_answers(default_answers(), overrides),
+        None => default_answers(),
+    })
 }
 
 #[cfg(test)]
