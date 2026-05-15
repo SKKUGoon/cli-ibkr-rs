@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{ArgGroup, Args, Subcommand};
+use clap::{Args, Subcommand};
 
 #[derive(Debug, Subcommand)]
 pub enum OrderCommand {
@@ -27,18 +27,11 @@ pub struct OrderAlgosArgs {
 }
 
 #[derive(Debug, Args)]
-#[command(group(
-    ArgGroup::new("orders_input")
-        .required(true)
-        .args(["orders_file", "orders_json"])
-))]
 pub struct OrderPlaceArgs {
     #[arg(long)]
     pub account_id: String,
-    #[arg(long, conflicts_with = "orders_json")]
-    pub orders_file: Option<PathBuf>,
-    #[arg(long, conflicts_with = "orders_file")]
-    pub orders_json: Option<String>,
+    #[arg(long)]
+    pub orders_json: String,
     #[arg(long, conflicts_with = "answers_json")]
     pub answers_file: Option<PathBuf>,
     #[arg(long, conflicts_with = "answers_file")]
@@ -48,18 +41,11 @@ pub struct OrderPlaceArgs {
 }
 
 #[derive(Debug, Args)]
-#[command(group(
-    ArgGroup::new("orders_input")
-        .required(true)
-        .args(["orders_file", "orders_json"])
-))]
 pub struct OrderWhatifArgs {
     #[arg(long)]
     pub account_id: String,
-    #[arg(long, conflicts_with = "orders_json")]
-    pub orders_file: Option<PathBuf>,
-    #[arg(long, conflicts_with = "orders_file")]
-    pub orders_json: Option<String>,
+    #[arg(long)]
+    pub orders_json: String,
 }
 
 #[derive(Debug, Args)]
@@ -79,20 +65,13 @@ pub struct OrderCancelArgs {
 }
 
 #[derive(Debug, Args)]
-#[command(group(
-    ArgGroup::new("order_input")
-        .required(true)
-        .args(["order_file", "order_json"])
-))]
 pub struct OrderModifyArgs {
     #[arg(long)]
     pub account_id: String,
     #[arg(long)]
     pub order_id: String,
-    #[arg(long, conflicts_with = "order_json")]
-    pub order_file: Option<PathBuf>,
-    #[arg(long, conflicts_with = "order_file")]
-    pub order_json: Option<String>,
+    #[arg(long)]
+    pub order_json: String,
     #[arg(long, conflicts_with = "answers_json")]
     pub answers_file: Option<PathBuf>,
     #[arg(long, conflicts_with = "answers_file")]
@@ -108,14 +87,7 @@ pub struct OrderStatusArgs {
 }
 
 #[derive(Debug, Args)]
-#[command(group(
-    ArgGroup::new("orders_input")
-        .required(true)
-        .args(["orders_file", "orders_json"])
-))]
 pub struct OrderFeePlanArgs {
-    #[arg(long, conflicts_with = "orders_json")]
-    pub orders_file: Option<PathBuf>,
-    #[arg(long, conflicts_with = "orders_file")]
-    pub orders_json: Option<String>,
+    #[arg(long)]
+    pub orders_json: String,
 }

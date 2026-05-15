@@ -667,10 +667,10 @@ ibkrctl order algos --conid 265598 --algo Adaptive --algo Vwap --add-description
 
 ## `order place`
 
-Places one or more orders from a JSON file or JSON argument and automatically answers selected IBKR confirmation prompts using built-in defaults plus any answers file or JSON argument.
+Places one or more orders from an inline JSON argument and automatically answers selected IBKR confirmation prompts using built-in defaults plus any answers file or JSON argument.
 
 ```bash
-ibkrctl order place --account-id <ACCOUNT_ID> (--orders-file <PATH> | --orders-json <JSON>) [--answers-file <PATH> | --answers-json <JSON>] [--max-replies <N>]
+ibkrctl order place --account-id <ACCOUNT_ID> --orders-json <JSON> [--answers-file <PATH> | --answers-json <JSON>] [--max-replies <N>]
 ```
 
 Options:
@@ -678,8 +678,7 @@ Options:
 | Option | Required | Default | Description |
 | --- | --- | --- | --- |
 | `--account-id <ACCOUNT_ID>` | Yes | None | IBKR account id used in the endpoint path. |
-| `--orders-file <PATH>` | Yes, unless `--orders-json` is used | None | JSON file containing one order object or an array of order objects. |
-| `--orders-json <JSON>` | Yes, unless `--orders-file` is used | None | Inline JSON containing one order object or an array of order objects. |
+| `--orders-json <JSON>` | Yes | None | Inline JSON containing one order object or an array of order objects. |
 | `--answers-file <PATH>` | No | Built-in defaults | JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
 | `--answers-json <JSON>` | No | Built-in defaults | Inline JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
 | `--max-replies <N>` | No | `20` | Maximum number of automatic confirmation reply loops before failing. |
@@ -690,9 +689,9 @@ Endpoint:
 POST iserver/account/{account_id}/orders
 ```
 
-Order file format:
+Order JSON format:
 
-The file may contain either a single order object:
+The JSON may contain either a single order object:
 
 ```json
 {
@@ -770,10 +769,10 @@ If no prompt remains, the final IBKR JSON response is printed. If IBKR returns a
 Examples:
 
 ```bash
-ibkrctl order place --account-id DU123456 --orders-file ./order.json --answers-file ./answers.json
-ibkrctl order place --account-id DU123456 --orders-file ./orders.json --answers-file ./answers.json --max-replies 5 --pretty
+ibkrctl order place --account-id DU123456 --orders-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"MKT","acct_id":"DU123456"}' --answers-file ./answers.json
+ibkrctl order place --account-id DU123456 --orders-json '[{"conid":265598,"side":"BUY","quantity":1,"order_type":"MKT","acct_id":"DU123456"}]' --answers-file ./answers.json --max-replies 5 --pretty
 ibkrctl order place --account-id DU123456 --orders-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"LMT","price":185.5,"acct_id":"DU123456"}' --answers-json '{"o354":true}' --pretty
-ibkrctl order place --account-id DU123456 --orders-file ./order.json --answers-json '{"o354":false}'
+ibkrctl order place --account-id DU123456 --orders-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"MKT","acct_id":"DU123456"}' --answers-json '{"o354":false}'
 ```
 
 ## `order whatif`
@@ -781,7 +780,7 @@ ibkrctl order place --account-id DU123456 --orders-file ./order.json --answers-j
 Submits one or more orders to the IBKR what-if endpoint.
 
 ```bash
-ibkrctl order whatif --account-id <ACCOUNT_ID> (--orders-file <PATH> | --orders-json <JSON>)
+ibkrctl order whatif --account-id <ACCOUNT_ID> --orders-json <JSON>
 ```
 
 Options:
@@ -789,8 +788,7 @@ Options:
 | Option | Required | Description |
 | --- | --- | --- |
 | `--account-id <ACCOUNT_ID>` | Yes | IBKR account id used in the endpoint path. |
-| `--orders-file <PATH>` | Yes, unless `--orders-json` is used | JSON file containing one order object or an array of order objects. |
-| `--orders-json <JSON>` | Yes, unless `--orders-file` is used | Inline JSON containing one order object or an array of order objects. |
+| `--orders-json <JSON>` | Yes | Inline JSON containing one order object or an array of order objects. |
 
 Endpoint:
 
@@ -805,7 +803,6 @@ The raw JSON response from IBKR.
 Example:
 
 ```bash
-ibkrctl order whatif --account-id DU123456 --orders-file ./order.json --pretty
 ibkrctl order whatif --account-id DU123456 --orders-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"LMT","price":185.5,"acct_id":"DU123456"}' --pretty
 ```
 
@@ -874,10 +871,10 @@ ibkrctl order cancel --account-id DU123456 --order-id 987654321 --pretty
 
 ## `order modify`
 
-Modifies an existing order from a JSON file or JSON argument and automatically answers selected IBKR confirmation prompts using built-in defaults plus any answers file or JSON argument.
+Modifies an existing order from an inline JSON argument and automatically answers selected IBKR confirmation prompts using built-in defaults plus any answers file or JSON argument.
 
 ```bash
-ibkrctl order modify --account-id <ACCOUNT_ID> --order-id <ORDER_ID> (--order-file <PATH> | --order-json <JSON>) [--answers-file <PATH> | --answers-json <JSON>] [--max-replies <N>]
+ibkrctl order modify --account-id <ACCOUNT_ID> --order-id <ORDER_ID> --order-json <JSON> [--answers-file <PATH> | --answers-json <JSON>] [--max-replies <N>]
 ```
 
 Options:
@@ -886,8 +883,7 @@ Options:
 | --- | --- | --- | --- |
 | `--account-id <ACCOUNT_ID>` | Yes | None | IBKR account id used in the endpoint path. |
 | `--order-id <ORDER_ID>` | Yes | None | Order id to modify. |
-| `--order-file <PATH>` | Yes, unless `--order-json` is used | None | JSON file containing one order object. |
-| `--order-json <JSON>` | Yes, unless `--order-file` is used | None | Inline JSON containing one order object. |
+| `--order-json <JSON>` | Yes | None | Inline JSON containing one order object. |
 | `--answers-file <PATH>` | No | Built-in defaults | JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
 | `--answers-json <JSON>` | No | Built-in defaults | Inline JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
 | `--max-replies <N>` | No | `20` | Maximum number of automatic confirmation reply loops before failing. |
@@ -898,7 +894,7 @@ Endpoint:
 POST iserver/account/{account_id}/order/{order_id}
 ```
 
-The `--order-file` uses the same order object schema described in [Order JSON Fields](#order-json-fields), but it must contain one object rather than an array.
+The `--order-json` uses the same order object schema described in [Order JSON Fields](#order-json-fields), but it must contain one object rather than an array.
 
 The answers file uses the same format and matching behavior as `order place`.
 
@@ -909,7 +905,7 @@ If no prompt remains, the final IBKR JSON response is printed. If IBKR returns a
 Example:
 
 ```bash
-ibkrctl order modify --account-id DU123456 --order-id 987654321 --order-file ./modify.json --answers-file ./answers.json --pretty
+ibkrctl order modify --account-id DU123456 --order-id 987654321 --order-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"LMT","price":185.5,"acct_id":"DU123456"}' --answers-file ./answers.json --pretty
 ibkrctl order modify --account-id DU123456 --order-id 987654321 --order-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"LMT","price":185.5,"acct_id":"DU123456"}' --answers-json '{"o354":true}' --pretty
 ```
 
@@ -955,15 +951,14 @@ Decision rule:
 - If `quantity * price > 10000`, the fee plan is `Fixed`.
 
 ```bash
-ibkrctl order fee-plan (--orders-file <PATH> | --orders-json <JSON>)
+ibkrctl order fee-plan --orders-json <JSON>
 ```
 
 Options:
 
 | Option | Required | Description |
 | --- | --- | --- |
-| `--orders-file <PATH>` | Yes, unless `--orders-json` is used | JSON file containing one order object or an array of order objects. |
-| `--orders-json <JSON>` | Yes, unless `--orders-file` is used | Inline JSON containing one order object or an array of order objects. |
+| `--orders-json <JSON>` | Yes | Inline JSON containing one order object or an array of order objects. |
 
 Input requirements:
 
@@ -987,7 +982,6 @@ Output:
 Examples:
 
 ```bash
-ibkrctl order fee-plan --orders-file ./orders.json --pretty
 ibkrctl order fee-plan --orders-json '{"conid":265598,"side":"BUY","quantity":100,"order_type":"LMT","price":100,"acct_id":"DU123456"}' --pretty
 ```
 
@@ -1164,13 +1158,13 @@ Command:
 
 ```bash
 ibkrctl init-session
-ibkrctl order place --account-id DU123456 --orders-file ./order.json --answers-file ./answers.json --output /tmp/place-order-response.json
+ibkrctl order place --account-id DU123456 --orders-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"MKT","acct_id":"DU123456"}' --answers-file ./answers.json --output /tmp/place-order-response.json
 ```
 
 ### Preview An Order Without Placing It
 
 ```bash
-ibkrctl order whatif --account-id DU123456 --orders-file ./order.json --pretty
+ibkrctl order whatif --account-id DU123456 --orders-json '{"conid":265598,"side":"BUY","quantity":1,"order_type":"LMT","price":185.5,"acct_id":"DU123456"}' --pretty
 ```
 
 ### Inspect And Cancel Live Orders

@@ -12,14 +12,14 @@ use super::confirmations::handle_confirmations;
 use super::input::{read_answers_input, read_order_input, read_orders_input};
 
 pub async fn place(client: &IbkrClient, args: OrderPlaceArgs) -> Result<Value, WorkerError> {
-    let request = read_orders_input(args.orders_file.as_deref(), args.orders_json.as_deref())?;
+    let request = read_orders_input(&args.orders_json)?;
     let answers = read_answers_input(args.answers_file.as_deref(), args.answers_json.as_deref())?;
     let value = client.place_orders(&args.account_id, &request).await?;
     handle_confirmations(client, value, &answers, args.max_replies).await
 }
 
 pub async fn whatif(client: &IbkrClient, args: OrderWhatifArgs) -> Result<Value, WorkerError> {
-    let request = read_orders_input(args.orders_file.as_deref(), args.orders_json.as_deref())?;
+    let request = read_orders_input(&args.orders_json)?;
     Ok(client.whatif_order(&args.account_id, &request).await?)
 }
 
@@ -34,7 +34,7 @@ pub async fn cancel(client: &IbkrClient, args: OrderCancelArgs) -> Result<Value,
 }
 
 pub async fn modify(client: &IbkrClient, args: OrderModifyArgs) -> Result<Value, WorkerError> {
-    let request = read_order_input(args.order_file.as_deref(), args.order_json.as_deref())?;
+    let request = read_order_input(&args.order_json)?;
     let answers = read_answers_input(args.answers_file.as_deref(), args.answers_json.as_deref())?;
     let value = client
         .modify_order(&args.account_id, &args.order_id, &request)
@@ -47,7 +47,7 @@ pub async fn status(client: &IbkrClient, args: OrderStatusArgs) -> Result<Value,
 }
 
 pub async fn fee_plan(args: OrderFeePlanArgs) -> Result<Value, WorkerError> {
-    let request = read_orders_input(args.orders_file.as_deref(), args.orders_json.as_deref())?;
+    let request = read_orders_input(&args.orders_json)?;
     let decisions = request
         .orders
         .iter()
