@@ -27,8 +27,15 @@ pub struct RawConfig {
 
 impl RawConfig {
     pub fn load(timeout_override: Option<u64>) -> Result<Self, WorkerError> {
+        Self::load_from(&env::ProcessEnv, timeout_override)
+    }
+
+    pub fn load_from(
+        env_source: &dyn env::EnvSource,
+        timeout_override: Option<u64>,
+    ) -> Result<Self, WorkerError> {
         let mut config = Self::default();
-        env::apply(&mut config)?;
+        env::apply(&mut config, env_source)?;
         if let Some(timeout) = timeout_override {
             config.timeout_seconds = Some(timeout);
         }

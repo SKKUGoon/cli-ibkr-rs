@@ -1,8 +1,10 @@
+use std::future::Future;
+
 use reqwest::header::CONTENT_LENGTH;
 use reqwest::Client;
 use serde::Deserialize;
 
-use crate::rest::response;
+use crate::rest::response::{self, RequestContext};
 use crate::Result;
 
 use super::session_token;
@@ -17,14 +19,55 @@ pub struct LiveSession {
 }
 
 #[derive(Debug, Deserialize)]
-struct LiveSessionResponse {
-    diffie_hellman_response: String,
-    live_session_token_signature: String,
-    live_session_token_expiration: i64,
+pub(crate) struct LiveSessionResponse {
+    pub(crate) diffie_hellman_response: String,
+    pub(crate) live_session_token_signature: String,
+    pub(crate) live_session_token_expiration: i64,
+}
+
+// Separates the HTTP round-trip from the LST crypto orchestration so the
+// latter can be exercised in tests with a fake transport. Production code
+// uses `ReqwestTransport` which wraps a `reqwest::Client`.
+pub(crate) trait LstTransport {
+    fn post_lst(
+        &self,
+        url: &str,
+        auth_header: String,
+    ) -> impl Future<Output = Result<LiveSessionResponse>> + Send;
+}
+
+pub(crate) struct ReqwestTransport<'a>(pub &'a Client);
+
+impl LstTransport for ReqwestTransport<'_> {
+    async fn post_lst(&self, url: &str, auth_header: String) -> Result<LiveSessionResponse> {
+        // CONTENT_LENGTH: 0 with an empty body is required — IBKR rejects POSTs
+        // to /oauth/live_session_token that omit it.
+        let mut request = self
+            .0
+            .post(url)
+            .header(CONTENT_LENGTH, "0")
+            .body(Vec::new());
+        for (key, value) in header::standard_headers(auth_header) {
+            request = request.header(key, value);
+        }
+        let context = RequestContext {
+            phase: "live-session-token",
+            method: "POST",
+            url,
+        };
+        response::parse_json_response(request.send().await?, context).await
+    }
 }
 
 impl LiveSession {
     pub async fn request(client: &Client, config: &OAuthConfig) -> Result<Self> {
+        Self::request_with_transport(&ReqwestTransport(client), config).await
+    }
+
+    pub(crate) async fn request_with_transport<T: LstTransport>(
+        transport: &T,
+        config: &OAuthConfig,
+    ) -> Result<Self> {
         config.validate()?;
         let dh = dh::read_dh_params(&config.dh_param_path)?;
 
@@ -46,13 +89,17 @@ impl LiveSession {
         let key = keys::read_private_key(&config.signature_key_path)?;
         params.insert("oauth_signature".to_string(), hmac::rsa_sha256(&base, key));
 
-        let response = send_lst_request(client, &url, config, &params).await?;
+        let auth_header = header::authorization_header(&config.realm, &params);
+        let response = transport.post_lst(&url, auth_header).await?;
+
         let token = session_token::compute(
             &dh.prime,
             &dh_random,
             &response.diffie_hellman_response,
             &prepend,
         )?;
+        // Cross-check: IBKR returns HMAC-SHA1_hex(LST, consumer_key) so both
+        // sides can confirm they derived identical session keys.
         session_token::validate(&token, &response.live_session_token_signature, config)?;
 
         Ok(Self {
@@ -84,20 +131,47 @@ fn decrypted_prepend(config: &OAuthConfig) -> Result<String> {
     hmac::decrypt_prepend(&config.access_token_secret, key)
 }
 
-async fn send_lst_request(
-    client: &Client,
-    url: &str,
-    config: &OAuthConfig,
-    params: &OAuthParams,
-) -> Result<LiveSessionResponse> {
-    let auth = header::authorization_header(&config.realm, params);
-    let mut request = client
-        .post(url)
-        .header(CONTENT_LENGTH, "0")
-        .body(Vec::new());
-    for (key, value) in header::standard_headers(auth) {
-        request = request.header(key, value);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::IbkrError;
+    use std::path::PathBuf;
+    use std::time::Duration;
+
+    use crate::oauth::config::LiveSessionCacheConfig;
+
+    fn config_missing_consumer_key() -> OAuthConfig {
+        OAuthConfig {
+            base_url: "https://example.test".to_string(),
+            consumer_key: String::new(),
+            realm: "limited_poa".to_string(),
+            access_token: "tok".to_string(),
+            access_token_secret: "secret".to_string(),
+            signature_key_path: PathBuf::from("/nonexistent/signature.pem"),
+            encryption_key_path: PathBuf::from("/nonexistent/encryption.pem"),
+            dh_param_path: PathBuf::from("/nonexistent/dhparam.pem"),
+            timeout: Duration::from_secs(5),
+            live_session_cache: LiveSessionCacheConfig::default(),
+        }
     }
-    let response = request.send().await?;
-    response::parse_json_response(response).await
+
+    struct UnreachableTransport;
+
+    impl LstTransport for UnreachableTransport {
+        async fn post_lst(&self, _url: &str, _auth_header: String) -> Result<LiveSessionResponse> {
+            panic!("transport must not be invoked when config validation fails");
+        }
+    }
+
+    // `request_with_transport` must short-circuit on config validation
+    // before doing any file I/O or HTTP work. This locks that behavior in
+    // place so a future refactor cannot accidentally reorder the checks.
+    #[tokio::test]
+    async fn request_short_circuits_on_invalid_config() {
+        let config = config_missing_consumer_key();
+        let err = LiveSession::request_with_transport(&UnreachableTransport, &config)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, IbkrError::MissingConfig(_)));
+    }
 }

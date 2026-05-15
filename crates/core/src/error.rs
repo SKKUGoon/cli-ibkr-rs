@@ -27,8 +27,23 @@ pub enum IbkrError {
     #[error("crypto operation failed: {0}")]
     Crypto(String),
 
-    #[error("IBKR returned HTTP {status}: {body}")]
-    HttpStatus { status: u16, body: String },
+    // Phase identifies which leg of the OAuth flow the request belongs to
+    // (e.g. "live-session-token", "protected-resource"). It exists so
+    // operators triaging logs can tell apart "the LST refresh failed" from
+    // "the user-facing API call failed" — they have very different
+    // implications even when IBKR returns the same status code. Sensitive
+    // material (Authorization header, signatures, token secrets, request
+    // body) is deliberately not carried here.
+    #[error(
+        "IBKR returned HTTP {status} during {phase} request: {method} {url}\nresponse body: {body}"
+    )]
+    HttpStatus {
+        phase: &'static str,
+        method: String,
+        url: String,
+        status: u16,
+        body: String,
+    },
 
     #[error("stock conid lookup failed for {symbol}: {message}")]
     StockConidLookup { symbol: String, message: String },

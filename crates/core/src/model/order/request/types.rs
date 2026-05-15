@@ -3,176 +3,111 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const FEE_PLAN_NOTIONAL_THRESHOLD: f64 = 10_000.0;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "PascalCase")]
-pub enum OrderFeePlan {
-    Tiered,
-    Fixed,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
+// Mirror of the IBKR `iserver/account/{accountId}/orders` order body.
+//
+// Wire format is camelCase by default (`rename_all = "camelCase"`). Only fields
+// whose IBKR spelling differs from a plain camelCase conversion carry an
+// explicit `rename` (e.g. `cOID`, `outsideRTH`). Every renamed Rust field also
+// accepts its `snake_case` form via `alias` so users can hand-write JSON in
+// either convention.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderRequest {
+    // --- Instrument identification ---------------------------------------
+    // `conid` and `conidex` are mutually exclusive; `validate()` enforces it.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub conid: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub side: Option<String>,
+    pub conidex: Option<String>,
+    #[serde(alias = "sec_type", skip_serializing_if = "Option::is_none")]
+    pub sec_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub quantity: Option<Value>,
-    #[serde(
-        rename = "orderType",
-        alias = "order_type",
-        skip_serializing_if = "Option::is_none"
-    )]
+    pub ticker: Option<String>,
+    #[serde(alias = "listing_exchange", skip_serializing_if = "Option::is_none")]
+    pub listing_exchange: Option<String>,
+
+    // --- Core order parameters -------------------------------------------
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub side: Option<String>,
+    #[serde(alias = "order_type", skip_serializing_if = "Option::is_none")]
     pub order_type: Option<String>,
-    #[serde(
-        rename = "acctId",
-        alias = "acct_id",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(alias = "acct_id", skip_serializing_if = "Option::is_none")]
     pub acct_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub price: Option<Value>,
+    pub tif: Option<String>,
+
+    // --- Sizing (mutually exclusive — see `validate()`) ------------------
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub conidex: Option<String>,
-    #[serde(
-        rename = "manualIndicator",
-        alias = "manual_indicator",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub manual_indicator: Option<bool>,
-    #[serde(
-        rename = "extOperator",
-        alias = "ext_operator",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub ext_operator: Option<String>,
-    #[serde(
-        rename = "secType",
-        alias = "sec_type",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub sec_type: Option<String>,
+    pub quantity: Option<Value>,
+    #[serde(alias = "cash_qty", skip_serializing_if = "Option::is_none")]
+    pub cash_qty: Option<Value>,
+    #[serde(alias = "fx_qty", skip_serializing_if = "Option::is_none")]
+    pub fx_qty: Option<Value>,
+
+    // --- Pricing ---------------------------------------------------------
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub price: Option<Value>,
+    #[serde(alias = "aux_price", skip_serializing_if = "Option::is_none")]
+    pub aux_price: Option<Value>,
+    #[serde(alias = "trailing_amt", skip_serializing_if = "Option::is_none")]
+    pub trailing_amt: Option<Value>,
+    #[serde(alias = "trailing_type", skip_serializing_if = "Option::is_none")]
+    pub trailing_type: Option<String>,
+
+    // --- Order grouping / linkage ----------------------------------------
+    // `cOID` and `outsideRTH` use IBKR's non-standard casing so they need
+    // explicit `rename`s; the camelCase default would emit `cOid`/`outsideRth`.
     #[serde(
         rename = "cOID",
         alias = "coid",
         skip_serializing_if = "Option::is_none"
     )]
     pub coid: Option<String>,
-    #[serde(
-        rename = "parentId",
-        alias = "parent_id",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(alias = "parent_id", skip_serializing_if = "Option::is_none")]
     pub parent_id: Option<String>,
-    #[serde(
-        rename = "listingExchange",
-        alias = "listing_exchange",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub listing_exchange: Option<String>,
-    #[serde(
-        rename = "isSingleGroup",
-        alias = "is_single_group",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(alias = "is_single_group", skip_serializing_if = "Option::is_none")]
     pub is_single_group: Option<bool>,
+
+    // --- Routing / session flags -----------------------------------------
     #[serde(
         rename = "outsideRTH",
         alias = "outside_rth",
         skip_serializing_if = "Option::is_none"
     )]
     pub outside_rth: Option<bool>,
-    #[serde(
-        rename = "auxPrice",
-        alias = "aux_price",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub aux_price: Option<Value>,
+    #[serde(alias = "use_adaptive", skip_serializing_if = "Option::is_none")]
+    pub use_adaptive: Option<bool>,
+    #[serde(alias = "is_ccy_conv", skip_serializing_if = "Option::is_none")]
+    pub is_ccy_conv: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ticker: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tif: Option<String>,
-    #[serde(
-        rename = "trailingAmt",
-        alias = "trailing_amt",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub trailing_amt: Option<Value>,
-    #[serde(
-        rename = "trailingType",
-        alias = "trailing_type",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub trailing_type: Option<String>,
-    #[serde(
-        rename = "customerAccount",
-        alias = "customer_account",
-        skip_serializing_if = "Option::is_none"
-    )]
+    pub deactivated: Option<bool>,
+    #[serde(alias = "is_close", skip_serializing_if = "Option::is_none")]
+    pub is_close: Option<bool>,
+
+    // --- Advisor / audit metadata ----------------------------------------
+    #[serde(alias = "manual_indicator", skip_serializing_if = "Option::is_none")]
+    pub manual_indicator: Option<bool>,
+    #[serde(alias = "ext_operator", skip_serializing_if = "Option::is_none")]
+    pub ext_operator: Option<String>,
+    #[serde(alias = "customer_account", skip_serializing_if = "Option::is_none")]
     pub customer_account: Option<String>,
-    #[serde(
-        rename = "isProCustomer",
-        alias = "is_pro_customer",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(alias = "is_pro_customer", skip_serializing_if = "Option::is_none")]
     pub is_pro_customer: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub referrer: Option<String>,
-    #[serde(
-        rename = "cashQty",
-        alias = "cash_qty",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub cash_qty: Option<Value>,
-    #[serde(
-        rename = "fxQty",
-        alias = "fx_qty",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub fx_qty: Option<Value>,
-    #[serde(
-        rename = "useAdaptive",
-        alias = "use_adaptive",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub use_adaptive: Option<bool>,
-    #[serde(
-        rename = "isCcyConv",
-        alias = "is_ccy_conv",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub is_ccy_conv: Option<bool>,
-    #[serde(
-        rename = "allocationMethod",
-        alias = "allocation_method",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(alias = "allocation_method", skip_serializing_if = "Option::is_none")]
     pub allocation_method: Option<String>,
-    #[serde(
-        rename = "manualOrderTime",
-        alias = "manual_order_time",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(alias = "manual_order_time", skip_serializing_if = "Option::is_none")]
     pub manual_order_time: Option<Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub deactivated: Option<bool>,
+
+    // --- Algo strategy (strategyParameters requires strategy — see `validate()`) ---
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strategy: Option<String>,
-    #[serde(
-        rename = "strategyParameters",
-        alias = "strategy_parameters",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(alias = "strategy_parameters", skip_serializing_if = "Option::is_none")]
     pub strategy_parameters: Option<Value>,
-    #[serde(
-        rename = "isClose",
-        alias = "is_close",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub is_close: Option<bool>,
+
+    // Catch-all for forward-compatibility: any field IBKR adds that we don't
+    // model yet round-trips through `extra` instead of being silently dropped.
     #[serde(flatten)]
     pub extra: BTreeMap<String, Value>,
 }
@@ -185,30 +120,4 @@ pub struct PlaceOrdersRequest {
 #[derive(Debug, Clone, Serialize)]
 pub struct ReplyRequest {
     pub confirmed: bool,
-}
-
-impl OrderRequest {
-    pub fn trading_notional(&self) -> Option<f64> {
-        let quantity = numeric_value(&self.quantity)?;
-        let price = numeric_value(&self.price)?;
-        Some((quantity * price).abs())
-    }
-
-    pub fn automatic_fee_plan(&self) -> Option<OrderFeePlan> {
-        self.trading_notional().map(|notional| {
-            if notional <= FEE_PLAN_NOTIONAL_THRESHOLD {
-                OrderFeePlan::Tiered
-            } else {
-                OrderFeePlan::Fixed
-            }
-        })
-    }
-}
-
-fn numeric_value(value: &Option<Value>) -> Option<f64> {
-    match value.as_ref()? {
-        Value::Number(number) => number.as_f64(),
-        Value::String(value) => value.parse().ok(),
-        _ => None,
-    }
 }

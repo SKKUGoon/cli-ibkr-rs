@@ -1,8 +1,14 @@
-use rand::{rngs::OsRng, RngCore};
+use rand::rngs::OsRng;
+use rand::TryRngCore;
 
 pub fn nonce_hex(bytes: usize) -> String {
     let mut data = vec![0_u8; bytes];
-    OsRng.fill_bytes(&mut data);
+    // rand 0.9 surfaces `OsRng` as fallible (`TryRngCore`). In practice the
+    // OS CSPRNG only fails if `getrandom` cannot reach the kernel, which is
+    // not recoverable for OAuth nonce generation — panic loudly.
+    OsRng
+        .try_fill_bytes(&mut data)
+        .expect("OS CSPRNG unavailable");
     hex::encode(data)
 }
 

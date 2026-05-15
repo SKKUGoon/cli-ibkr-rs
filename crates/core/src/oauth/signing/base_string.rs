@@ -2,6 +2,16 @@ use std::collections::BTreeMap;
 
 use super::percent;
 
+// Builds the OAuth 1.0a signature base string (RFC 5849 §3.4.1).
+//
+// Wire format: `METHOD&percent(URL)&percent(joined-params)` where joined-params
+// are sorted ASCII-lexicographically by key. We rely on `BTreeMap` for that
+// ordering — do not switch to `HashMap` without re-sorting explicitly, or
+// signatures will be non-deterministic and IBKR will reject the request.
+//
+// For the live-session-token endpoint specifically, IBKR prepends the
+// hex-encoded decrypted access token secret to the base string before signing.
+// That is the `prepend` argument; pass `None` for normal protected requests.
 pub fn build(
     method: &str,
     url: &str,
@@ -9,6 +19,9 @@ pub fn build(
     request_params: &[(String, String)],
     prepend: Option<&str>,
 ) -> String {
+    // Merge oauth_* params with any request-specific params (query/body).
+    // Both sides are already percent-encoded by their callers, so this step
+    // is pure key collection — duplicate keys are not expected in IBKR flows.
     let mut params = oauth_params.clone();
     for (key, value) in request_params {
         params.insert(key.clone(), value.clone());

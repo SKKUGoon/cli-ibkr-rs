@@ -3,6 +3,7 @@ use reqwest::Method;
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::rest::response::RequestContext;
 use crate::rest::{request, response};
 use crate::Result;
 
@@ -53,6 +54,11 @@ impl IbkrClient {
         } else if method_name == "POST" {
             request = request.header(CONTENT_LENGTH, "0").body(Vec::new());
         }
-        response::parse_json_response(request.send().await?).await
+        let context = RequestContext {
+            phase: "protected-resource",
+            method: &method_name,
+            url: &url,
+        };
+        response::parse_json_response(request.send().await?, context).await
     }
 }
