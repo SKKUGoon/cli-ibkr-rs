@@ -103,7 +103,7 @@ impl RedisLiveSessionCache {
 
 pub(in crate::oauth) fn cache_lock_value() -> String {
     let mut bytes = [0_u8; 16];
-    rand::TryRngCore::try_fill_bytes(&mut rand::rngs::OsRng, &mut bytes)
+    rand::TryRng::try_fill_bytes(&mut rand::rngs::SysRng, &mut bytes)
         .expect("OS CSPRNG unavailable");
     hex::encode(bytes)
 }
