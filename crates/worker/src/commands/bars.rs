@@ -73,23 +73,21 @@ pub(crate) fn to_columns(bars: &[HistoryBar]) -> BarColumns {
 }
 
 pub fn parse_history_bars(conid: &str, response: &Value) -> Result<Vec<HistoryBar>, WorkerError> {
-    let conid = conid
-        .parse::<i64>()
-        .map_err(|source| WorkerError::HistoryBars {
-            message: format!("invalid conid {conid:?}: {source}"),
-        })?;
+    let conid = conid.parse::<i64>().map_err(|source| {
+        WorkerError::HistoryParse(format!("invalid conid {conid:?}: {source}"))
+    })?;
 
     let bar_length_seconds = value_i64(response, "barLength")
         .and_then(|value| i32::try_from(value).ok())
-        .ok_or_else(|| WorkerError::HistoryBars {
-            message: "history response missing integer barLength".to_string(),
+        .ok_or_else(|| {
+            WorkerError::HistoryParse("history response missing integer barLength".to_string())
         })?;
 
     let data = response
         .get("data")
         .and_then(Value::as_array)
-        .ok_or_else(|| WorkerError::HistoryBars {
-            message: "history response missing data array".to_string(),
+        .ok_or_else(|| {
+            WorkerError::HistoryParse("history response missing data array".to_string())
         })?;
 
     data.iter()
@@ -194,9 +192,7 @@ fn value_i64(row: &Value, key: &str) -> Option<i64> {
 }
 
 fn field_error(index: usize, field: &str) -> WorkerError {
-    WorkerError::HistoryBars {
-        message: format!("history data[{index}] missing numeric {field}"),
-    }
+    WorkerError::HistoryParse(format!("history data[{index}] missing numeric {field}"))
 }
 
 #[cfg(test)]

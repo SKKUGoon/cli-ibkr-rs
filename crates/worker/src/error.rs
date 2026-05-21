@@ -69,11 +69,11 @@ pub enum WorkerError {
     #[error("unexpected order response while handling confirmations: {0}")]
     UnexpectedOrderResponse(String),
 
-    #[error("conid lookup failed for {symbol}: {message}")]
-    ConidLookup { symbol: String, message: String },
+    #[error("conid lookup for {symbol} matched {count} active database rows; add --exchange")]
+    AmbiguousConid { symbol: String, count: usize },
 
-    #[error("history bars persistence failed: {message}")]
-    HistoryBars { message: String },
+    #[error("history bars parse failed: {0}")]
+    HistoryParse(String),
 
     #[error("Postgres request failed: {0}")]
     Postgres(#[from] sqlx::Error),

@@ -8,7 +8,7 @@ use crate::config::RawConfig;
 use crate::error::WorkerError;
 use crate::output;
 
-use super::{auth, environment, market_data, oauth, order, portfolio};
+use super::{environment, market_data, oauth, order};
 
 pub async fn run(cli: Cli) -> Result<(), WorkerError> {
     if let Command::Oauth { command } = cli.command {
@@ -31,10 +31,10 @@ pub async fn run(cli: Cli) -> Result<(), WorkerError> {
     let client = IbkrClient::new(config)?;
 
     let value = match cli.command {
-        Command::AuthStatus => auth::auth_status(&client).await?,
+        Command::AuthStatus => client.auth_status().await?,
         Command::Env => unreachable!("env handled before client config loading"),
-        Command::InitSession { compete } => auth::init_session(&client, compete).await?,
-        Command::Tickle => auth::tickle(&client).await?,
+        Command::InitSession { compete } => client.init_session(compete).await?,
+        Command::Tickle => client.tickle().await?,
         Command::FetchHistory(args) => {
             let pool = connect_database(database.as_deref()).await;
             market_data::fetch_history(pool.as_ref(), &client, args).await?
@@ -43,19 +43,13 @@ pub async fn run(cli: Cli) -> Result<(), WorkerError> {
             let pool = connect_database(database.as_deref()).await;
             market_data::stock_conid_cached(pool.as_ref(), &client, args).await?
         }
-        Command::Accounts => portfolio::accounts(&client).await?,
-        Command::AccountSummary { account_id } => {
-            portfolio::account_summary(&client, &account_id).await?
-        }
-        Command::PortfolioSummary { account_id } => {
-            portfolio::portfolio_summary(&client, &account_id).await?
-        }
-        Command::Ledger { account_id } => portfolio::ledger(&client, &account_id).await?,
-        Command::Positions { account_id, page } => {
-            portfolio::positions(&client, &account_id, page).await?
-        }
+        Command::Accounts => client.accounts().await?,
+        Command::AccountSummary { account_id } => client.account_summary(&account_id).await?,
+        Command::PortfolioSummary { account_id } => client.portfolio_summary(&account_id).await?,
+        Command::Ledger { account_id } => client.ledger(&account_id).await?,
+        Command::Positions { account_id, page } => client.positions(&account_id, page).await?,
         Command::LiveOrders { account_id, force } => {
-            portfolio::live_orders(&client, account_id.as_deref(), force).await?
+            client.live_orders(account_id.as_deref(), force).await?
         }
         Command::Order { command } => order::run(&client, command).await?,
         Command::Oauth { .. } => unreachable!("oauth handled before client config loading"),
@@ -66,7 +60,7 @@ pub async fn run(cli: Cli) -> Result<(), WorkerError> {
 
 async fn connect_database(database: Option<&str>) -> Option<PgPool> {
     let Some(database) = database else {
-        eprintln!("IBKR_DATABASE is not set; skipping local database lookup or persistence");
+        tracing::warn!("IBKR_DATABASE is not set; skipping local database lookup or persistence");
         return None;
     };
 
@@ -78,11 +72,14 @@ async fn connect_database(database: Option<&str>) -> Option<PgPool> {
     match time::timeout(Duration::from_secs(15), connect).await {
         Ok(Ok(pool)) => Some(pool),
         Ok(Err(err)) => {
-            eprintln!("IBKR_DATABASE is not connectable; skipping local database lookup or persistence: {err}");
+            tracing::warn!(
+                error = %err,
+                "IBKR_DATABASE is not connectable; skipping local database lookup or persistence"
+            );
             None
         }
         Err(_) => {
-            eprintln!(
+            tracing::warn!(
                 "IBKR_DATABASE connection timed out after 15 seconds; skipping local database lookup or persistence"
             );
             None

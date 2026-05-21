@@ -29,13 +29,17 @@ pub async fn fetch_history(
         match bars::parse_history_bars(&conid, &value) {
             Ok(parsed) => {
                 if let Err(err) = bars::upsert_history_bars(pool, &parsed).await {
-                    eprintln!(
-                        "historical bars database upsert failed; returning IBKR API result: {err}"
+                    tracing::warn!(
+                        error = %err,
+                        "historical bars database upsert failed; returning IBKR API result"
                     );
                 }
             }
             Err(err) => {
-                eprintln!("historical bars parsing failed; returning IBKR API result: {err}");
+                tracing::warn!(
+                    error = %err,
+                    "historical bars parsing failed; returning IBKR API result"
+                );
             }
         }
     }
@@ -58,9 +62,9 @@ pub async fn stock_conid_cached(
         match conids::find_active_conid(pool, &request.symbol, request.exchange.as_deref()).await {
             Ok(Some(row)) => return Ok(serde_json::to_value(row.into_lookup_result())?),
             Ok(None) => {}
-            Err(err @ WorkerError::ConidLookup { .. }) => return Err(err),
+            Err(err @ WorkerError::AmbiguousConid { .. }) => return Err(err),
             Err(err) => {
-                eprintln!("conid database lookup failed; falling back to IBKR API: {err}");
+                tracing::warn!(error = %err, "conid database lookup failed; falling back to IBKR API");
             }
         }
     }
@@ -70,7 +74,7 @@ pub async fn stock_conid_cached(
         match conids::upsert_conid(pool, &result).await {
             Ok(row) => return Ok(serde_json::to_value(row.into_lookup_result())?),
             Err(err) => {
-                eprintln!("conid database upsert failed; returning IBKR API result: {err}");
+                tracing::warn!(error = %err, "conid database upsert failed; returning IBKR API result");
             }
         }
     }

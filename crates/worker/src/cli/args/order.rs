@@ -32,9 +32,9 @@ pub struct OrderPlaceArgs {
     pub account_id: String,
     #[arg(long)]
     pub orders_json: String,
-    #[arg(long, conflicts_with = "answers_json")]
+    #[arg(long)]
     pub answers_file: Option<PathBuf>,
-    #[arg(long, conflicts_with = "answers_file")]
+    #[arg(long)]
     pub answers_json: Option<String>,
     #[arg(long, default_value_t = 20)]
     pub max_replies: u32,
@@ -72,9 +72,9 @@ pub struct OrderModifyArgs {
     pub order_id: String,
     #[arg(long)]
     pub order_json: String,
-    #[arg(long, conflicts_with = "answers_json")]
+    #[arg(long)]
     pub answers_file: Option<PathBuf>,
-    #[arg(long, conflicts_with = "answers_file")]
+    #[arg(long)]
     pub answers_json: Option<String>,
     #[arg(long, default_value_t = 20)]
     pub max_replies: u32,

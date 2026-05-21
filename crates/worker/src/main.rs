@@ -7,6 +7,7 @@ mod output;
 
 use clap::Parser;
 use std::path::{Path, PathBuf};
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() {
@@ -14,6 +15,8 @@ async fn main() {
         print_version();
         return;
     }
+
+    init_tracing();
 
     let cli = cli::Cli::parse();
     if let Err(err) = load_dotenv(cli.env_file.as_deref()) {
@@ -25,6 +28,16 @@ async fn main() {
         eprintln!("{err}");
         std::process::exit(1);
     }
+}
+
+fn init_tracing() {
+    let filter = EnvFilter::try_from_env("IBKR_LOG").unwrap_or_else(|_| EnvFilter::new("warn"));
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_writer(std::io::stderr)
+        .with_target(false)
+        .without_time()
+        .init();
 }
 
 fn version_requested() -> bool {

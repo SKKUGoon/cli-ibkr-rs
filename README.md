@@ -79,7 +79,7 @@ ibkrctl fetch-history --conid 265598 --period 1d --bar 1min --output /tmp/ibkr-h
 
 ### 5. Place an order
 
-Order placement is non-interactive. The order input contains one order object or an array of order objects, passed inline with `--orders-json`. If IBKR returns warning prompts, the answers input must explicitly accept them by message substring or message id, passed either with `--answers-file` or `--answers-json`.
+Order placement is non-interactive. The order input contains one order object or an array of order objects, passed inline with `--orders-json`. If IBKR returns warning prompts, the answers input must explicitly accept them by message substring or message id. Answers are layered from built-in defaults, the optional `IBKR_ORDERS_ANSWER_JSON` file path, optional `--answers-file`, and optional `--answers-json`; later layers override duplicate keys.
 Run `init-session` before `order algos`, `order place`, `order modify`, or other protected IServer order calls.
 
 Normal orders omit IB Algo fields:

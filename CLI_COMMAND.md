@@ -667,10 +667,10 @@ ibkrctl order algos --conid 265598 --algo Adaptive --algo Vwap --add-description
 
 ## `order place`
 
-Places one or more orders from an inline JSON argument and automatically answers selected IBKR confirmation prompts using built-in defaults plus any answers file or JSON argument.
+Places one or more orders from an inline JSON argument and automatically answers selected IBKR confirmation prompts using built-in defaults plus optional answer-file and inline JSON layers.
 
 ```bash
-ibkrctl order place --account-id <ACCOUNT_ID> --orders-json <JSON> [--answers-file <PATH> | --answers-json <JSON>] [--max-replies <N>]
+ibkrctl order place --account-id <ACCOUNT_ID> --orders-json <JSON> [--answers-file <PATH>] [--answers-json <JSON>] [--max-replies <N>]
 ```
 
 Options:
@@ -679,8 +679,8 @@ Options:
 | --- | --- | --- | --- |
 | `--account-id <ACCOUNT_ID>` | Yes | None | IBKR account id used in the endpoint path. |
 | `--orders-json <JSON>` | Yes | None | Inline JSON containing one order object or an array of order objects. |
-| `--answers-file <PATH>` | No | Built-in defaults | JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
-| `--answers-json <JSON>` | No | Built-in defaults | Inline JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
+| `--answers-file <PATH>` | No | Built-in defaults plus optional `IBKR_ORDERS_ANSWER_JSON` file | JSON map used to override or extend lower-priority answers for IBKR confirmation prompts. |
+| `--answers-json <JSON>` | No | Built-in defaults plus optional answer files | Inline JSON map used to override or extend lower-priority answers for IBKR confirmation prompts. |
 | `--max-replies <N>` | No | `20` | Maximum number of automatic confirmation reply loops before failing. |
 
 Endpoint:
@@ -751,7 +751,7 @@ The CLI accepts these known prompts by default, based on the `QuestionType` cons
 | `MISSING_MARKET_DATA` | `o354`, `You are submitting an order without market data` | `true` |
 | `STOP_ORDER_RISKS` | `o10331`, `You are about to submit a stop order` | `true` |
 
-When `--answers-file` or `--answers-json` is supplied, its entries override or extend the built-in answers. Unknown prompts still fail unless supplied explicitly.
+Answer sources are merged in this order: built-in defaults, optional base file path from `IBKR_ORDERS_ANSWER_JSON`, optional `--answers-file`, then optional `--answers-json`. Later sources override duplicate keys. If `IBKR_ORDERS_ANSWER_JSON` is unset, empty, or points to a missing file, it is treated as `{}`. If that file exists but is unreadable or contains invalid JSON, the command fails. Unknown prompts still fail unless supplied explicitly.
 
 Prompt matching:
 
@@ -871,10 +871,10 @@ ibkrctl order cancel --account-id DU123456 --order-id 987654321 --pretty
 
 ## `order modify`
 
-Modifies an existing order from an inline JSON argument and automatically answers selected IBKR confirmation prompts using built-in defaults plus any answers file or JSON argument.
+Modifies an existing order from an inline JSON argument and automatically answers selected IBKR confirmation prompts using built-in defaults plus optional answer-file and inline JSON layers.
 
 ```bash
-ibkrctl order modify --account-id <ACCOUNT_ID> --order-id <ORDER_ID> --order-json <JSON> [--answers-file <PATH> | --answers-json <JSON>] [--max-replies <N>]
+ibkrctl order modify --account-id <ACCOUNT_ID> --order-id <ORDER_ID> --order-json <JSON> [--answers-file <PATH>] [--answers-json <JSON>] [--max-replies <N>]
 ```
 
 Options:
@@ -884,8 +884,8 @@ Options:
 | `--account-id <ACCOUNT_ID>` | Yes | None | IBKR account id used in the endpoint path. |
 | `--order-id <ORDER_ID>` | Yes | None | Order id to modify. |
 | `--order-json <JSON>` | Yes | None | Inline JSON containing one order object. |
-| `--answers-file <PATH>` | No | Built-in defaults | JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
-| `--answers-json <JSON>` | No | Built-in defaults | Inline JSON map used to override or extend built-in answers for IBKR confirmation prompts. |
+| `--answers-file <PATH>` | No | Built-in defaults plus optional `IBKR_ORDERS_ANSWER_JSON` file | JSON map used to override or extend lower-priority answers for IBKR confirmation prompts. |
+| `--answers-json <JSON>` | No | Built-in defaults plus optional answer files | Inline JSON map used to override or extend lower-priority answers for IBKR confirmation prompts. |
 | `--max-replies <N>` | No | `20` | Maximum number of automatic confirmation reply loops before failing. |
 
 Endpoint:

@@ -75,9 +75,9 @@ fn select_one(rows: Vec<ConidRow>, symbol: &str) -> Result<Option<ConidRow>, Wor
     match rows.len() {
         0 => Ok(None),
         1 => Ok(rows.into_iter().next()),
-        count => Err(WorkerError::ConidLookup {
+        count => Err(WorkerError::AmbiguousConid {
             symbol: symbol.to_ascii_uppercase(),
-            message: format!("{count} active database rows matched; add --exchange"),
+            count,
         }),
     }
 }
@@ -106,7 +106,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert!(err.to_string().contains("2 active database rows matched"));
+        assert!(err.to_string().contains("matched 2 active database rows"));
         assert!(err.to_string().contains("AAPL"));
     }
 
