@@ -616,6 +616,14 @@ Fetches recent trade executions for the current day and prior days. This is trad
 
 IBKR supports up to 7 days through this endpoint and advises calling it once per session.
 
+IBKR may return an empty trade list until account context has been loaded for the session. For scripts and Airflow jobs, warm the session in this order:
+
+```bash
+ibkrctl init-session
+ibkrctl accounts
+ibkrctl trades --days 7 --pretty
+```
+
 ```bash
 ibkrctl trades [--account-id <ACCOUNT_ID>] [--days <DAYS>]
 ```

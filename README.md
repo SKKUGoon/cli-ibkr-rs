@@ -123,6 +123,14 @@ ibkrctl order algos --conid 265598 --algo Adaptive --algo Vwap --add-description
 
 Use `trades` to retrieve recent trade executions. This is execution history, not market-data history; use `fetch-history` for historical bars. IBKR supports up to 7 days for this endpoint and advises calling it once per session.
 
+IBKR may return an empty trade list until account context has been loaded for the session. For scripts and Airflow jobs, warm the session in this order:
+
+```bash
+ibkrctl init-session
+ibkrctl accounts
+ibkrctl trades --days 7 --pretty
+```
+
 ```bash
 ibkrctl trades
 ibkrctl trades --account-id DU123456 --days 7 --pretty
