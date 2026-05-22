@@ -48,6 +48,7 @@ pub async fn run(cli: Cli) -> Result<(), WorkerError> {
         Command::PortfolioSummary { account_id } => client.portfolio_summary(&account_id).await?,
         Command::Ledger { account_id } => client.ledger(&account_id).await?,
         Command::Positions { account_id, page } => client.positions(&account_id, page).await?,
+        Command::Trades(args) => client.trades(args.account_id.as_deref(), args.days).await?,
         Command::LiveOrders { account_id, force } => {
             client.live_orders(account_id.as_deref(), force).await?
         }

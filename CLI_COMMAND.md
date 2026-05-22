@@ -18,6 +18,7 @@ Examples:
 ibkrctl auth-status --pretty
 ibkrctl stock-conid --symbol AAPL --exchange NASDAQ
 ibkrctl fetch-history --conid 265598 --period 1d --bar 1min --output /tmp/history.json
+ibkrctl trades --account-id DU123456 --days 7 --pretty
 ```
 
 ## Exit And Output Contract
@@ -155,6 +156,7 @@ Top-level commands:
 | `portfolio-summary` | Fetch portfolio summary for one account. |
 | `ledger` | Fetch portfolio ledger for one account. |
 | `positions` | Fetch portfolio positions for one account and page. |
+| `trades` | Fetch recent trade executions. |
 | `live-orders` | Fetch live orders. |
 | `order algos` | Fetch available IB Algo strategies and parameters for a contract. |
 | `order place` | Submit one or more orders and automatically handle configured confirmations. |
@@ -606,6 +608,40 @@ Examples:
 ```bash
 ibkrctl live-orders
 ibkrctl live-orders --account-id DU123456 --force --pretty
+```
+
+## `trades`
+
+Fetches recent trade executions for the current day and prior days. This is trade execution history, not market-data bar history; use `fetch-history` for historical market-data bars.
+
+IBKR supports up to 7 days through this endpoint and advises calling it once per session.
+
+```bash
+ibkrctl trades [--account-id <ACCOUNT_ID>] [--days <DAYS>]
+```
+
+Options:
+
+| Option | Required | Default | Description |
+| --- | --- | --- | --- |
+| `--account-id <ACCOUNT_ID>` | No | None | Optional account id or allocation group filter. |
+| `--days <DAYS>` | No | None | Number of days of executions to request, up to IBKR's maximum of 7. If omitted, IBKR returns the current day. |
+
+Endpoint:
+
+```text
+GET iserver/account/trades/
+```
+
+Output:
+
+The raw JSON response from IBKR.
+
+Examples:
+
+```bash
+ibkrctl trades
+ibkrctl trades --account-id DU123456 --days 7 --pretty
 ```
 
 ## Order Command Overview
@@ -1070,6 +1106,7 @@ Example adaptive algo order:
 | `portfolio-summary` | `portfolio/{account_id}/summary` |
 | `ledger` | `portfolio/{account_id}/ledger` |
 | `positions` | `portfolio/{account_id}/positions/{page}` |
+| `trades` | `iserver/account/trades/` |
 | `live-orders` | `iserver/account/orders` |
 | `order algos` | `iserver/contract/{conid}/algos` |
 | `order place` | `iserver/account/{account_id}/orders` |

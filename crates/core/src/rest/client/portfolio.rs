@@ -29,6 +29,17 @@ impl IbkrClient {
             .await
     }
 
+    pub async fn trades(&self, account_id: Option<&str>, days: Option<u8>) -> Result<Value> {
+        let mut params = Vec::new();
+        if let Some(account_id) = account_id {
+            params.push(("accountId".to_string(), account_id.to_string()));
+        }
+        if let Some(days) = days {
+            params.push(("days".to_string(), days.to_string()));
+        }
+        self.get_json(endpoint::TRADES, &params).await
+    }
+
     pub async fn live_orders(&self, account_id: Option<&str>, force: bool) -> Result<Value> {
         let mut params = vec![("force".to_string(), force.to_string())];
         if let Some(account_id) = account_id {

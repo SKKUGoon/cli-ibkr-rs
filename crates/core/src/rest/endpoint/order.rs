@@ -1,4 +1,5 @@
 pub const LIVE_ORDERS: &str = "iserver/account/orders";
+pub const TRADES: &str = "iserver/account/trades/";
 
 pub fn place_orders(account_id: &str) -> String {
     format!("iserver/account/{account_id}/orders")

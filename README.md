@@ -119,6 +119,15 @@ Specify up to 8 case-sensitive algo ids with repeated `--algo` flags.
 ibkrctl order algos --conid 265598 --algo Adaptive --algo Vwap --add-description --add-params --pretty
 ```
 
+### Trade executions
+
+Use `trades` to retrieve recent trade executions. This is execution history, not market-data history; use `fetch-history` for historical bars. IBKR supports up to 7 days for this endpoint and advises calling it once per session.
+
+```bash
+ibkrctl trades
+ibkrctl trades --account-id DU123456 --days 7 --pretty
+```
+
 Algo orders use the same order placement command with `strategy` and `strategy_parameters` in the order JSON:
 
 ```json
@@ -251,6 +260,7 @@ Implemented REST/CLI commands:
 - `portfolio-summary`: `portfolio/{account_id}/summary`
 - `ledger`: `portfolio/{account_id}/ledger`
 - `positions`: `portfolio/{account_id}/positions/{page}`
+- `trades`: `iserver/account/trades/`
 - `live-orders`: `iserver/account/orders`
 - `order algos`: `iserver/contract/{conid}/algos`
 - `order place`: `iserver/account/{account_id}/orders`
@@ -263,6 +273,6 @@ Implemented REST/CLI commands:
 Missing but relevant functions:
 
 - Account PnL endpoints.
-- Typed request/response models for accounts, positions, live orders, auth, and session calls.
+- Typed request/response models for accounts, positions, trades, live orders, auth, and session calls.
 
 Historical data, stock conid lookup, and order placement have non-trivial typed request shapes today. The other implemented endpoints are still thin JSON passthroughs with little or no request structure.
