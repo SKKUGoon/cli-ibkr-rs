@@ -1,17 +1,26 @@
+mod account;
 mod order;
+mod quick_vwap;
+#[cfg(test)]
+mod tests;
 
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 
+pub use account::PositionsLiveArgs;
 pub use order::{
     OrderAlgosArgs, OrderCancelArgs, OrderCommand, OrderFeePlanArgs, OrderModifyArgs,
     OrderPlaceArgs, OrderReplyArgs, OrderStatusArgs, OrderWhatifArgs,
 };
+pub use quick_vwap::{QuickOrderSide, QuickVwapOrderArgs};
 
 #[derive(Debug, Parser)]
 #[command(name = "ibkrctl")]
 #[command(about = "OAuth-only IBKR CLI for Airflow tasks")]
+#[command(
+    after_help = "--------------------\nINTERACTIVE UTILITIES\n  quick-vwap-order  Prompt for and submit one manual VWAP limit order"
+)]
 pub struct Cli {
     #[arg(long, global = true)]
     pub env_file: Option<PathBuf>,
@@ -44,7 +53,12 @@ pub enum Command {
     Tickle,
     FetchHistory(FetchHistoryArgs),
     StockConid(StockConidArgs),
+    /// Initialize and list accounts available to portfolio endpoints.
     Accounts,
+    /// Initialize and list accounts available to IServer trading endpoints.
+    BrokerageAccounts,
+    /// Return P&L for the currently selected account and its models.
+    AccountPnl,
     AccountSummary {
         #[arg(long)]
         account_id: String,
@@ -63,6 +77,8 @@ pub enum Command {
         #[arg(long, default_value_t = 0)]
         page: u32,
     },
+    /// Return uncached, near-real-time positions through the REST API.
+    PositionsLive(PositionsLiveArgs),
     Trades(TradesArgs),
     LiveOrders {
         #[arg(long)]
@@ -74,6 +90,11 @@ pub enum Command {
         #[command(subcommand)]
         command: OrderCommand,
     },
+    #[command(
+        hide = true,
+        about = "Interactively build, review, and submit one manual VWAP limit order"
+    )]
+    QuickVwapOrder(QuickVwapOrderArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -118,52 +139,4 @@ pub struct TradesArgs {
     pub account_id: Option<String>,
     #[arg(long)]
     pub days: Option<u8>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Cli, Command};
-    use clap::Parser;
-
-    #[test]
-    fn trades_accepts_no_optional_args() {
-        let cli = Cli::try_parse_from(["ibkrctl", "trades"]).expect("trades should parse");
-
-        match cli.command {
-            Command::Trades(args) => {
-                assert_eq!(args.account_id, None);
-                assert_eq!(args.days, None);
-            }
-            other => panic!("expected trades command, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn trades_accepts_account_id_and_days() {
-        let cli = Cli::try_parse_from([
-            "ibkrctl",
-            "trades",
-            "--account-id",
-            "DU123456",
-            "--days",
-            "7",
-        ])
-        .expect("trades with filters should parse");
-
-        match cli.command {
-            Command::Trades(args) => {
-                assert_eq!(args.account_id.as_deref(), Some("DU123456"));
-                assert_eq!(args.days, Some(7));
-            }
-            other => panic!("expected trades command, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn trades_rejects_non_numeric_days() {
-        let err = Cli::try_parse_from(["ibkrctl", "trades", "--days", "seven"])
-            .expect_err("non-numeric days should fail");
-
-        assert!(err.to_string().contains("invalid value"));
-    }
 }

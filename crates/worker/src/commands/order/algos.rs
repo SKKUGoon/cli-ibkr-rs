@@ -5,12 +5,15 @@ use serde_json::Value;
 use crate::cli::OrderAlgosArgs;
 use crate::error::WorkerError;
 
-pub async fn run(client: &IbkrClient, args: OrderAlgosArgs) -> Result<Value, WorkerError> {
+pub async fn fetch_order_algorithms(
+    client: &IbkrClient,
+    arguments: OrderAlgosArgs,
+) -> Result<Value, WorkerError> {
     let request = AlgoParamsRequest::new(
-        args.conid,
-        args.algos,
-        args.add_description,
-        args.add_params,
+        arguments.conid,
+        arguments.algos,
+        arguments.add_description,
+        arguments.add_params,
     )?;
 
     Ok(client

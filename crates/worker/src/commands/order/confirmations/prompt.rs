@@ -2,14 +2,14 @@ use serde_json::Value;
 
 use crate::error::WorkerError;
 
-pub(super) fn final_order_response(value: Value) -> Value {
+pub(crate) fn final_order_response(value: Value) -> Value {
     match value {
         Value::Array(mut values) if values.len() == 1 => values.remove(0),
         other => other,
     }
 }
 
-pub(super) fn too_many_replies(max_replies: u32, last_response: Value) -> WorkerError {
+pub(crate) fn too_many_replies(max_replies: u32, last_response: Value) -> WorkerError {
     WorkerError::TooManyOrderReplies {
         max_replies,
         last_response: last_response.to_string(),
@@ -17,14 +17,14 @@ pub(super) fn too_many_replies(max_replies: u32, last_response: Value) -> Worker
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(super) struct OrderPrompt {
+pub(crate) struct OrderPrompt {
     pub reply_id: String,
     pub message: String,
     pub message_id: Option<String>,
 }
 
 impl OrderPrompt {
-    pub(super) fn describe(&self) -> String {
+    pub(crate) fn describe(&self) -> String {
         match &self.message_id {
             Some(message_id) => format!("{} (messageId: {message_id})", self.message),
             None => format!("{} (messageId: not provided by IBKR)", self.message),
@@ -32,7 +32,7 @@ impl OrderPrompt {
     }
 }
 
-pub(super) fn order_prompt(value: &Value) -> Result<Option<OrderPrompt>, WorkerError> {
+pub(crate) fn order_prompt(value: &Value) -> Result<Option<OrderPrompt>, WorkerError> {
     let Value::Array(items) = value else {
         return Err(WorkerError::UnexpectedOrderResponse(value.to_string()));
     };

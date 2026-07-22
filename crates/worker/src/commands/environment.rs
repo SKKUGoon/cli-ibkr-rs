@@ -10,6 +10,8 @@ const ENV_VARS: &[EnvVar] = &[
     EnvVar::plain("IBKR_ENCRYPTION_KEY_PATH"),
     EnvVar::plain("IBKR_DH_PARAM_PATH"),
     EnvVar::plain("IBKR_TIMEOUT_SECONDS"),
+    EnvVar::plain("IBKR_ACCOUNT_ID"),
+    EnvVar::plain("IBKR_QUICK_ORDER_PREFIX"),
     EnvVar::secret("IBKR_DATABASE"),
     EnvVar::plain("IBKR_LST_CACHE_MODE"),
     EnvVar::secret("IBKR_REDIS_URL"),
@@ -34,7 +36,7 @@ impl EnvVar {
     }
 }
 
-pub fn render() -> String {
+pub fn render_environment_report() -> String {
     let mut lines = ENV_VARS
         .iter()
         .map(|var| {

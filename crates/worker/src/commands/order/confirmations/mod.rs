@@ -2,6 +2,7 @@ mod prompt;
 #[cfg(test)]
 mod tests;
 
+use dialoguer::Confirm;
 use ibkr_core::model::order::{find_answer, Answers};
 use ibkr_core::IbkrClient;
 use serde_json::Value;
@@ -33,4 +34,28 @@ pub async fn handle_confirmations(
     }
 
     Err(too_many_replies(max_replies, value))
+}
+
+pub(crate) async fn handle_interactive_confirmations(
+    client: &IbkrClient,
+    mut submission_response: Value,
+    max_replies: u32,
+) -> Result<Value, WorkerError> {
+    for _ in 0..max_replies {
+        let Some(server_prompt) = order_prompt(&submission_response)? else {
+            return Ok(final_order_response(submission_response));
+        };
+        let should_confirm = Confirm::new()
+            .with_prompt(server_prompt.describe())
+            .default(false)
+            .interact()?;
+        submission_response = client
+            .reply(&server_prompt.reply_id, should_confirm)
+            .await?;
+        if !should_confirm {
+            return Ok(submission_response);
+        }
+    }
+
+    Err(too_many_replies(max_replies, submission_response))
 }

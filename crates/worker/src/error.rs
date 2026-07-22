@@ -83,4 +83,10 @@ pub enum WorkerError {
 
     #[error("{0}")]
     Json(#[from] serde_json::Error),
+
+    #[error("interactive prompt failed: {0}")]
+    Prompt(#[from] dialoguer::Error),
+
+    #[error("interactive order was cancelled by the operator")]
+    OperatorCancelled,
 }

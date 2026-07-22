@@ -24,7 +24,7 @@ async fn main() {
         std::process::exit(1);
     }
 
-    if let Err(err) = commands::run(cli).await {
+    if let Err(err) = commands::execute_cli_command(cli).await {
         eprintln!("{err}");
         std::process::exit(1);
     }
