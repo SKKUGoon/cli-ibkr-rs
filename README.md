@@ -123,18 +123,59 @@ ibkrctl order algos --conid 265598 --algo Adaptive --algo Vwap --add-description
 
 Use `trades` to retrieve recent trade executions. This is execution history, not market-data history; use `fetch-history` for historical bars. IBKR supports up to 7 days for this endpoint and advises calling it once per session.
 
-IBKR may return an empty trade list until account context has been loaded for the session. For scripts and Airflow jobs, warm the session in this order:
+`brokerage-accounts` calls `/iserver/accounts`; this is distinct from the
+`accounts` command, which calls `/portfolio/accounts`. IBKR may return an empty
+trade list until brokerage account context has been loaded for the session. For
+scripts and Airflow jobs, keep the warm-up sequence explicit:
 
 ```bash
 ibkrctl init-session
-ibkrctl accounts
-ibkrctl trades --days 7 --pretty
-```
-
-```bash
+ibkrctl brokerage-accounts
 ibkrctl trades
+sleep 5
 ibkrctl trades --account-id DU123456 --days 7 --pretty
 ```
+
+The five-second delay is orchestration policy rather than hidden CLI behavior.
+Portfolio endpoints have their own preflight: call `accounts` before
+`portfolio-summary`, `ledger`, `positions`, or `positions-live` for an
+individual account. For the IServer `account-summary` command, use
+`brokerage-accounts` as the account-context preflight.
+
+### Account P&L and near-real-time positions
+
+```bash
+ibkrctl brokerage-accounts
+ibkrctl account-pnl --pretty
+
+ibkrctl accounts
+ibkrctl positions-live --account-id DU123456 --pretty
+```
+
+`positions-live` uses the uncached REST endpoint and supports optional `--model`,
+`--sort`, and `--direction a|d` filters. It does not open a WebSocket.
+
+### Interactive quick VWAP order
+
+`quick-vwap-order` is an operator utility rather than an Airflow command. It is
+listed separately at the bottom of `ibkrctl --help`. Missing values are prompted;
+flags can prefill common values. The utility resolves the ticker directly with
+IBKR, displays the complete payload, defaults submission confirmation to **no**,
+and prompts separately for every warning returned by IBKR.
+
+```bash
+ibkrctl --env-file /secure/path/ibkr.env init-session
+ibkrctl --env-file /secure/path/ibkr.env brokerage-accounts
+ibkrctl --env-file /secure/path/ibkr.env quick-vwap-order
+```
+
+The fixed order fields are `orderType=LMT`, `tif=DAY`, and `strategy=Vwap`.
+Start and end times default to `15:30:00 US/Eastern` and
+`16:00:00 US/Eastern`; they remain editable. `IBKR_ACCOUNT_ID` and
+`IBKR_QUICK_ORDER_PREFIX` provide optional prompt defaults. This utility does
+not connect to Postgres and does not persist the order locally. The brokerage
+preflight remains a separate command so its response and any failure stay
+visible.
 
 Algo orders use the same order placement command with `strategy` and `strategy_parameters` in the order JSON:
 
@@ -189,6 +230,8 @@ IBKR_SIGNATURE_KEY_PATH=/secure/path/private_signature.pem
 IBKR_ENCRYPTION_KEY_PATH=/secure/path/private_encryption.pem
 IBKR_DH_PARAM_PATH=/secure/path/dhparam.pem
 IBKR_TIMEOUT_SECONDS=30
+IBKR_ACCOUNT_ID=DU123456
+IBKR_QUICK_ORDER_PREFIX=kappa-k1
 IBKR_DATABASE=postgres://user:password@host:5432/dbname
 IBKR_LST_CACHE_MODE=redis
 IBKR_REDIS_URL=redis://user:password@redis.example.internal:6379/0
@@ -264,10 +307,13 @@ Implemented REST/CLI commands:
 - `fetch-history`: `iserver/marketdata/history`
 - `stock-conid`: `trsrv/stocks`
 - `accounts`: `portfolio/accounts`
+- `brokerage-accounts`: `iserver/accounts`
+- `account-pnl`: `iserver/account/pnl/partitioned`
 - `account-summary`: `iserver/account/{account_id}/summary`
 - `portfolio-summary`: `portfolio/{account_id}/summary`
 - `ledger`: `portfolio/{account_id}/ledger`
 - `positions`: `portfolio/{account_id}/positions/{page}`
+- `positions-live`: `portfolio2/{account_id}/positions`
 - `trades`: `iserver/account/trades/`
 - `live-orders`: `iserver/account/orders`
 - `order algos`: `iserver/contract/{conid}/algos`
@@ -277,10 +323,10 @@ Implemented REST/CLI commands:
 - `order cancel`: `iserver/account/{account_id}/order/{order_id}`
 - `order modify`: `iserver/account/{account_id}/order/{order_id}`
 - `order status`: `iserver/account/order/status/{order_id}`
+- `quick-vwap-order`: interactive `trsrv/stocks` lookup followed by one VWAP
+  order submission
 
-Missing but relevant functions:
-
-- Account PnL endpoints.
-- Typed request/response models for accounts, positions, trades, live orders, auth, and session calls.
+Missing but relevant functions include typed response models for accounts,
+positions, trades, live orders, auth, and session calls.
 
 Historical data, stock conid lookup, and order placement have non-trivial typed request shapes today. The other implemented endpoints are still thin JSON passthroughs with little or no request structure.

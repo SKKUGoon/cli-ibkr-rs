@@ -1,6 +1,6 @@
 # ibkrctl CLI Command Reference
 
-`ibkrctl` is an OAuth-only Interactive Brokers CLI intended for non-interactive jobs such as Airflow tasks. It wraps selected IBKR REST endpoints, signs requests with OAuth credentials, prints successful responses as JSON, and exits nonzero on failures.
+`ibkrctl` is an OAuth-only Interactive Brokers CLI intended primarily for non-interactive jobs such as Airflow tasks. It also provides a separately listed interactive utility for placing a manual VWAP order. The CLI wraps selected IBKR REST endpoints, signs requests with OAuth credentials, prints successful responses as JSON, and exits nonzero on failures.
 
 This document describes every command currently exposed by the CLI.
 
@@ -33,6 +33,8 @@ Two commands are exceptions to the JSON-output rule:
 
 - `env` writes plain text containing supported `IBKR_*` variables and their effective values.
 - `oauth generate-materials` writes status notices to stderr and creates files on disk.
+
+`quick-vwap-order` prompts through the controlling terminal and writes its review information to stderr. If the order is submitted, its final IBKR response follows the normal JSON stdout or `--output` contract.
 
 ## Global Options
 
@@ -111,6 +113,8 @@ Supported variables:
 | `IBKR_ENCRYPTION_KEY_PATH` | Yes | None | Path to private encryption key PEM. |
 | `IBKR_DH_PARAM_PATH` | Yes | None | Path to DH parameter PEM. |
 | `IBKR_TIMEOUT_SECONDS` | No | `30` | HTTP timeout in seconds. Can be overridden by `--timeout-seconds`. |
+| `IBKR_ACCOUNT_ID` | No | None | Default account id offered by the interactive `quick-vwap-order` form. |
+| `IBKR_QUICK_ORDER_PREFIX` | No | `quick-vwap` | Default client-order-id prefix offered by `quick-vwap-order`. |
 | `IBKR_DATABASE` | No | None | PostgreSQL URL used by `stock-conid` for local conid cache lookup/upsert and by `fetch-history` for best-effort bar persistence. |
 | `IBKR_LST_CACHE_MODE` | No | `memory` | Live Session Token cache mode: `memory`, `redis`, or `disabled`. |
 | `IBKR_REDIS_URL` | Required when Redis cache is used | None | Redis URL for shared Live Session Token cache. |
@@ -151,11 +155,14 @@ Top-level commands:
 | `tickle` | Keep an already-initialized brokerage session alive. |
 | `fetch-history` | Fetch historical market-data bars for a conid. |
 | `stock-conid` | Resolve a stock symbol to an active IBKR conid, optionally using a PostgreSQL cache. |
-| `accounts` | List portfolio accounts. |
+| `accounts` | Initialize and list accounts available to portfolio endpoints. |
+| `brokerage-accounts` | Initialize and list accounts available to IServer trading endpoints. |
+| `account-pnl` | Fetch P&L for the currently selected account and its models. |
 | `account-summary` | Fetch IServer account summary for one account. |
 | `portfolio-summary` | Fetch portfolio summary for one account. |
 | `ledger` | Fetch portfolio ledger for one account. |
 | `positions` | Fetch portfolio positions for one account and page. |
+| `positions-live` | Fetch uncached, near-real-time portfolio positions through REST. |
 | `trades` | Fetch recent trade executions. |
 | `live-orders` | Fetch live orders. |
 | `order algos` | Fetch available IB Algo strategies and parameters for a contract. |
@@ -166,6 +173,12 @@ Top-level commands:
 | `order modify` | Modify an order and automatically handle configured confirmations. |
 | `order status` | Fetch status for one order. |
 | `order fee-plan` | Compute the local Tiered/Fixed fee-plan decision for one or more limit orders. |
+
+Interactive utilities are separated from the normal command list in `ibkrctl --help`:
+
+| Command | Purpose |
+| --- | --- |
+| `quick-vwap-order` | Prompt for, review, and optionally submit one manual VWAP limit order. |
 
 ## `oauth generate-materials`
 
@@ -243,6 +256,8 @@ IBKR_SIGNATURE_KEY_PATH=/secure/path/private_signature.pem
 IBKR_ENCRYPTION_KEY_PATH=/secure/path/private_encryption.pem
 IBKR_DH_PARAM_PATH=/secure/path/dhparam.pem
 IBKR_TIMEOUT_SECONDS=30
+IBKR_ACCOUNT_ID=DU123456
+IBKR_QUICK_ORDER_PREFIX=quick-vwap
 IBKR_DATABASE=post...name
 IBKR_LST_CACHE_MODE=redis
 IBKR_REDIS_URL=redi.../0
@@ -434,7 +449,7 @@ ibkrctl stock-conid --symbol BRK.B --default-filtering false --pretty
 
 ## `accounts`
 
-Lists portfolio accounts.
+Initializes and lists accounts available to portfolio endpoints.
 
 ```bash
 ibkrctl accounts
@@ -454,6 +469,59 @@ Example:
 
 ```bash
 ibkrctl accounts --pretty
+```
+
+Call this command before account-scoped `portfolio-summary`, `ledger`, `positions`, or `positions-live` requests. It is different from `brokerage-accounts`.
+
+## `brokerage-accounts`
+
+Initializes and lists accounts available to IServer trading endpoints.
+
+```bash
+ibkrctl brokerage-accounts
+```
+
+Endpoint:
+
+```text
+GET iserver/accounts
+```
+
+Output:
+
+The raw JSON response from IBKR.
+
+Example:
+
+```bash
+ibkrctl brokerage-accounts --pretty
+```
+
+Use this as the account-context preflight for `account-summary`, `account-pnl`, and the trade-execution warm-up workflow. It does not replace the `accounts` preflight required by portfolio endpoints.
+
+## `account-pnl`
+
+Fetches P&L for the currently selected account and its models.
+
+```bash
+ibkrctl account-pnl
+```
+
+Endpoint:
+
+```text
+GET iserver/account/pnl/partitioned
+```
+
+Output:
+
+The raw JSON response from IBKR.
+
+Example:
+
+```bash
+ibkrctl brokerage-accounts
+ibkrctl account-pnl --pretty
 ```
 
 ## `account-summary`
@@ -483,6 +551,7 @@ The raw JSON response from IBKR.
 Example:
 
 ```bash
+ibkrctl brokerage-accounts
 ibkrctl account-summary --account-id DU123456 --pretty
 ```
 
@@ -578,6 +647,41 @@ ibkrctl positions --account-id DU123456
 ibkrctl positions --account-id DU123456 --page 1 --pretty
 ```
 
+## `positions-live`
+
+Fetches uncached, near-real-time positions for one account through the REST API. This command does not open a WebSocket.
+
+```bash
+ibkrctl positions-live --account-id <ACCOUNT_ID> [--model <MODEL>] [--sort <FIELD>] [--direction a|d]
+```
+
+Options:
+
+| Option | Required | Default | Description |
+| --- | --- | --- | --- |
+| `--account-id <ACCOUNT_ID>` | Yes | None | IBKR account id. |
+| `--model <MODEL>` | No | None | Optional model filter. |
+| `--sort <FIELD>` | No | None | Optional field used to sort positions. |
+| `--direction <a|d>` | No | None | Optional ascending (`a`) or descending (`d`) sort direction. |
+
+Endpoint:
+
+```text
+GET portfolio2/{account_id}/positions
+```
+
+Output:
+
+The raw JSON response from IBKR.
+
+Examples:
+
+```bash
+ibkrctl accounts
+ibkrctl positions-live --account-id DU123456 --pretty
+ibkrctl positions-live --account-id DU123456 --model Growth --sort position --direction d --pretty
+```
+
 ## `live-orders`
 
 Fetches live orders.
@@ -620,9 +724,13 @@ IBKR may return an empty trade list until account context has been loaded for th
 
 ```bash
 ibkrctl init-session
-ibkrctl accounts
-ibkrctl trades --days 7 --pretty
+ibkrctl brokerage-accounts
+ibkrctl trades
+sleep 5
+ibkrctl trades --account-id DU123456 --days 7 --pretty
 ```
+
+The five-second wait is explicit orchestration policy; the CLI does not sleep, retry, or silently fall back. The initial unscoped `trades` request and the later scoped request therefore remain separately observable.
 
 ```bash
 ibkrctl trades [--account-id <ACCOUNT_ID>] [--days <DAYS>]
@@ -650,6 +758,71 @@ Examples:
 ```bash
 ibkrctl trades
 ibkrctl trades --account-id DU123456 --days 7 --pretty
+```
+
+## `quick-vwap-order`
+
+Interactively builds, reviews, and optionally submits one manual VWAP limit order. This is an operator utility, so it is listed under `INTERACTIVE UTILITIES` rather than the normal command list in top-level help.
+
+```bash
+ibkrctl quick-vwap-order [OPTIONS]
+```
+
+Options prefill the form; omitted values are prompted:
+
+| Option | Required | Default | Description |
+| --- | --- | --- | --- |
+| `--account-id <ACCOUNT_ID>` | No | `IBKR_ACCOUNT_ID`, then `IBKRCTL_ACCOUNT_ID` | Account used to place the order. |
+| `--ticker <TICKER>` | No | None | Stock ticker resolved to a conid through IBKR. |
+| `--exchange <EXCHANGE>` | No | Automatic | Optional exchange used to disambiguate ticker resolution. |
+| `--side <buy|sell>` | No | Interactive selection | Order side. |
+| `--quantity <QUANTITY>` | No | None | Positive order quantity. |
+| `--limit-price <PRICE>` | No | None | Positive limit price. |
+| `--start-time <TIME>` | No | `15:30:00 US/Eastern` | Editable VWAP start time. |
+| `--end-time <TIME>` | No | `16:00:00 US/Eastern` | Editable VWAP end time. |
+| `--max-percent-volume <VALUE>` | No | `0.1` | VWAP maximum percentage of market volume. |
+| `--client-order-id-prefix <PREFIX>` | No | `IBKR_QUICK_ORDER_PREFIX` or `quick-vwap` | Prefix used to construct the client order id. |
+| `--max-replies <COUNT>` | No | `20` | Maximum IBKR confirmation prompts handled after submission. |
+
+The generated order always uses these fixed fields:
+
+```json
+{
+  "orderType": "LMT",
+  "tif": "DAY",
+  "strategy": "Vwap",
+  "strategyParameters": {
+    "allowPastEndTime": "0",
+    "noTakeLiq": "0",
+    "speedUp": "0"
+  }
+}
+```
+
+The utility resolves the ticker directly through `trsrv/stocks`, prints the complete order payload to stderr, and asks for final confirmation with **no** as the default. After submission, every warning from IBKR is presented as a separate confirmation that also defaults to **no**.
+
+It does not connect to PostgreSQL and does not persist the order locally. The final IBKR JSON response follows the normal stdout or `--output` behavior.
+
+Recommended workflow:
+
+```bash
+ibkrctl --env-file /secure/path/ibkr.env init-session
+ibkrctl --env-file /secure/path/ibkr.env brokerage-accounts
+ibkrctl --env-file /secure/path/ibkr.env quick-vwap-order
+```
+
+Values can be prefixed while retaining the review and confirmation steps:
+
+```bash
+ibkrctl quick-vwap-order \
+  --account-id DU123456 \
+  --ticker TQQQ \
+  --side buy \
+  --quantity 10 \
+  --limit-price 70 \
+  --start-time "15:30:00 US/Eastern" \
+  --end-time "16:00:00 US/Eastern" \
+  --max-percent-volume 0.1
 ```
 
 ## Order Command Overview
@@ -1110,12 +1283,16 @@ Example adaptive algo order:
 | `fetch-history` | `iserver/marketdata/history` |
 | `stock-conid` | `trsrv/stocks` |
 | `accounts` | `portfolio/accounts` |
+| `brokerage-accounts` | `iserver/accounts` |
+| `account-pnl` | `iserver/account/pnl/partitioned` |
 | `account-summary` | `iserver/account/{account_id}/summary` |
 | `portfolio-summary` | `portfolio/{account_id}/summary` |
 | `ledger` | `portfolio/{account_id}/ledger` |
 | `positions` | `portfolio/{account_id}/positions/{page}` |
+| `positions-live` | `portfolio2/{account_id}/positions` |
 | `trades` | `iserver/account/trades/` |
 | `live-orders` | `iserver/account/orders` |
+| `quick-vwap-order` | `trsrv/stocks`, `iserver/account/{account_id}/orders`, and confirmation replies when required |
 | `order algos` | `iserver/contract/{conid}/algos` |
 | `order place` | `iserver/account/{account_id}/orders` |
 | `order whatif` | `iserver/account/{account_id}/orders/whatif` |
@@ -1166,6 +1343,37 @@ Initialize brokerage session:
 
 ```bash
 ibkrctl init-session
+```
+
+### Initialize Account Contexts
+
+IServer trading endpoints and portfolio endpoints have different account-context preflights.
+
+For IServer account summary and P&L:
+
+```bash
+ibkrctl brokerage-accounts
+ibkrctl account-summary --account-id DU123456 --pretty
+ibkrctl account-pnl --pretty
+```
+
+For portfolio summary, ledger, and positions:
+
+```bash
+ibkrctl accounts
+ibkrctl portfolio-summary --account-id DU123456 --pretty
+ibkrctl ledger --account-id DU123456 --pretty
+ibkrctl positions --account-id DU123456 --pretty
+ibkrctl positions-live --account-id DU123456 --pretty
+```
+
+For scoped trade executions:
+
+```bash
+ibkrctl brokerage-accounts
+ibkrctl trades
+sleep 5
+ibkrctl trades --account-id DU123456 --days 7 --pretty
 ```
 
 ### Resolve Symbol Then Fetch History
@@ -1231,3 +1439,5 @@ For Airflow or similar systems:
 - Use `IBKR_LST_CACHE_MODE=redis` when many short-lived tasks need to share OAuth Live Session Tokens.
 - Run `init-session` before protected account, market-data, and order workflows.
 - Re-run `init-session` if IBKR reports that bridge state is missing or stale.
+- Keep `brokerage-accounts`, the initial `trades` request, and any required wait as explicit scheduler tasks; the CLI does not hide these steps.
+- Do not run `quick-vwap-order` as an unattended scheduler task; it requires a controlling terminal and operator confirmations.
